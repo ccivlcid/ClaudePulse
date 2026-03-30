@@ -25,7 +25,7 @@ export default function CostEstimate() {
   const maxCount = sorted[0]?.[1] ?? 1;
 
   return (
-    <div className="rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <div className="card">
       <div className="flex items-baseline justify-between mb-5">
         <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Cost</h2>
         <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>

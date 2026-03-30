@@ -21,7 +21,7 @@ export default function FileHeatmap() {
   const maxTotal = files[0]?.total ?? 1;
 
   return (
-    <div className="rounded-xl p-5 h-[420px] flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <div className="card h-[420px] flex flex-col">
       <div className="flex items-baseline justify-between mb-4">
         <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Files</h2>
         <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{files.length}</span>

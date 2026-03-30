@@ -30,7 +30,7 @@ export default function AgentTracker() {
   const running = agentList.filter(a => a.status === 'running').length;
 
   return (
-    <div className="rounded-xl p-5 h-[420px] flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <div className="card h-[420px] flex flex-col">
       <div className="flex items-baseline justify-between mb-4">
         <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Agents</h2>
         {running > 0 ? (
@@ -54,8 +54,8 @@ export default function AgentTracker() {
                 key={a.agentId}
                 className="flex items-center justify-between py-2 px-3 rounded-lg text-[12px]"
                 style={{
-                  background: isRunning ? 'rgba(34, 197, 94, 0.04)' : 'transparent',
-                  border: isRunning ? '1px solid rgba(34, 197, 94, 0.12)' : '1px solid var(--border)',
+                  background: isRunning ? 'color-mix(in srgb, var(--green) 5%, transparent)' : 'transparent',
+                  border: isRunning ? '1px solid color-mix(in srgb, var(--green) 15%, transparent)' : '1px solid var(--border)',
                 }}
               >
                 <div className="flex items-center gap-2">

@@ -20,7 +20,7 @@ export default function ProjectComparison() {
   const sorted = [...projects.values()].sort((a, b) => b.tools - a.tools);
 
   return (
-    <div className="rounded-xl p-5 h-[360px] flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <div className="card h-[360px] flex flex-col">
       <div className="flex items-baseline justify-between mb-4">
         <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Projects</h2>
         <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{sorted.length}</span>
@@ -42,7 +42,7 @@ export default function ProjectComparison() {
             </thead>
             <tbody>
               {sorted.map(p => (
-                <tr key={p.project} className="hover:bg-white/[0.015]" style={{ borderTop: '1px solid var(--border)' }}>
+                <tr key={p.project} className="row-hover" style={{ borderTop: '1px solid var(--border)' }}>
                   <td className="py-2 pr-4 truncate max-w-[200px] font-mono" style={{ color: 'var(--text-secondary)' }} title={p.project}>
                     {p.project.split('/').slice(-2).join('/')}
                   </td>

@@ -24,7 +24,7 @@ export default function ActivityStream() {
   }, [toolEvents.length]);
 
   return (
-    <div className="h-[560px] flex flex-col rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <div className="card h-[560px] flex flex-col">
       <div className="flex items-baseline justify-between mb-4">
         <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Activity</h2>
         <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{toolEvents.length}</span>
@@ -44,7 +44,7 @@ export default function ActivityStream() {
                 const color = isError ? 'var(--red)' : (TOOL_COLOR[e.toolName ?? ''] ?? 'var(--text-muted)');
 
                 return (
-                  <tr key={e.id} className="group hover:bg-white/[0.02]">
+                  <tr key={e.id} className="group row-hover">
                     <td className="py-[5px] pr-3 nums whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>{time}</td>
                     <td className="py-[5px] pr-3 whitespace-nowrap font-medium w-16" style={{ color }}>
                       {isError ? 'ERROR' : e.toolName}
@@ -53,7 +53,7 @@ export default function ActivityStream() {
                       {e.filePath ?? (e.toolInput as Record<string, string>)?.command ?? ''}
                     </td>
                     {isError && e.message && (
-                      <td className="py-[5px] pl-3 truncate max-w-0 text-[11px]" style={{ color: '#fca5a5' }}>
+                      <td className="py-[5px] pl-3 truncate max-w-0 text-[11px]" style={{ color: 'var(--red)' }}>
                         {e.message}
                       </td>
                     )}

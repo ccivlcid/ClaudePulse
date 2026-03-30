@@ -43,3 +43,15 @@ body {
 }
 .live-pulse { animation: live-pulse 2s ease-in-out infinite; }
 .nums { font-variant-numeric: tabular-nums; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.row-hover:hover {
+  background: var(--border);
+  background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+}

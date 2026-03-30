@@ -33,7 +33,7 @@ export default function ServerMonitor() {
   }, []);
 
   return (
-    <div className="rounded-xl p-5 h-[360px] flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <div className="card h-[360px] flex flex-col">
       <div className="flex items-baseline justify-between mb-4">
         <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Server</h2>
         <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{logs.length} lines</span>
@@ -57,13 +57,13 @@ export default function ServerMonitor() {
                   <tr key={i}>
                     <td className="py-[2px] pr-2 nums whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>{time}</td>
                     {(isError || isWarn) && (
-                      <td className="py-[2px] pr-2 whitespace-nowrap" style={{ color: isError ? 'var(--red)' : '#eab308' }}>
+                      <td className="py-[2px] pr-2 whitespace-nowrap" style={{ color: isError ? 'var(--red)' : 'var(--accent)' }}>
                         {isError ? 'ERR' : 'WRN'}
                       </td>
                     )}
                     <td
                       className="py-[2px]"
-                      style={{ color: isError ? '#fca5a5' : isWarn ? '#fde68a' : 'var(--text-muted)' }}
+                      style={{ color: isError ? 'var(--red)' : isWarn ? 'var(--accent)' : 'var(--text-muted)' }}
                       colSpan={isError || isWarn ? 1 : 2}
                     >
                       {log.text}
