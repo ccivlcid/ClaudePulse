@@ -146,7 +146,8 @@ app.get('/api/sse', (c) => {
 // --- Static file serving (built React app) ---
 
 app.get('*', (c) => {
-  const webDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../dist/web');
+  // When compiled, server.js is in dist/web/ alongside index.html and assets/
+  const webDir = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Z]:)/, '$1');
   const reqPath = c.req.path === '/' ? '/index.html' : c.req.path;
   const filePath = path.join(webDir, reqPath);
 

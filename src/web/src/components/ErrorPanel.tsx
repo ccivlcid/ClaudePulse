@@ -6,7 +6,7 @@ export default function ErrorPanel() {
   const errors = events.filter(e => e.type === 'tool-error');
 
   return (
-    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 h-96 flex flex-col">
+    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 h-[480px] flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-gray-400">Errors & Alerts</h2>
         {errors.length > 0 && (

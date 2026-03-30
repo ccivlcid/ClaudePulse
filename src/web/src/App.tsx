@@ -36,29 +36,38 @@ export default function App() {
       </header>
 
       {/* Dashboard Grid */}
-      <main className="p-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2">
+      <main className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-[1600px] mx-auto">
+        {/* Row 1: Activity + Agent */}
+        <div>
           <ActivityStream />
         </div>
         <div>
           <AgentTracker />
         </div>
+
+        {/* Row 2: Timeline + Errors */}
+        <div>
+          <SessionTimeline />
+        </div>
+        <div>
+          <ErrorPanel />
+        </div>
+
+        {/* Row 3: File Heatmap + Cost */}
         <div>
           <FileHeatmap />
         </div>
         <div>
           <CostEstimate />
         </div>
-        <div>
-          <ErrorPanel />
-        </div>
-        <div className="xl:col-span-2">
-          <SessionTimeline />
-        </div>
-        <div>
+
+        {/* Row 4: Server Monitor (full width) */}
+        <div className="lg:col-span-2">
           <ServerMonitor />
         </div>
-        <div className="xl:col-span-3">
+
+        {/* Row 5: Project Comparison (full width) */}
+        <div className="lg:col-span-2">
           <ProjectComparison />
         </div>
       </main>

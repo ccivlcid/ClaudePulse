@@ -16,5 +16,5 @@
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/web/**", "src/**/*.test.ts", "node_modules", "dist"]
+  "exclude": ["src/web/src/**", "src/web/vite.config.ts", "src/web/index.html", "src/**/*.test.ts", "node_modules", "dist"]
 }

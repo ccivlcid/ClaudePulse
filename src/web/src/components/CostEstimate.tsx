@@ -24,7 +24,7 @@ export default function CostEstimate() {
   const sorted = Object.entries(toolCounts).sort(([, a], [, b]) => b - a);
 
   return (
-    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 h-96 flex flex-col">
+    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 h-[480px] flex flex-col">
       <h2 className="text-sm font-semibold text-gray-400 mb-3">Cost Estimate</h2>
       <div className="flex-1">
         <div className="text-2xl font-bold text-white mb-1">
