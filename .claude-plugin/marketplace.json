@@ -1,0 +1,25 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-pulse",
+  "description": "Real-time activity dashboard for Claude Code - visualize agent actions, dev server logs, and cost estimates",
+  "owner": {
+    "name": "claude-pulse contributors"
+  },
+  "plugins": [
+    {
+      "name": "claude-pulse",
+      "description": "Real-time activity dashboard for Claude Code. Tracks tool usage, agent activity, dev server logs, and cost estimates with a web-based visualization UI.",
+      "version": "0.1.0",
+      "source": "./",
+      "category": "productivity",
+      "tags": [
+        "dashboard",
+        "monitoring",
+        "real-time",
+        "visualization",
+        "dev-server"
+      ]
+    }
+  ],
+  "version": "0.1.0"
+}

@@ -1,0 +1,61 @@
+{
+  "description": "Claude Pulse event collection hooks",
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "node \"$CLAUDE_PLUGIN_ROOT\"/scripts/collect-event.mjs session-start",
+        "timeout": 3
+      }]
+    }],
+    "PreToolUse": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "node \"$CLAUDE_PLUGIN_ROOT\"/scripts/collect-event.mjs tool-start",
+        "timeout": 3
+      }]
+    }],
+    "PostToolUse": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "node \"$CLAUDE_PLUGIN_ROOT\"/scripts/collect-event.mjs tool-end",
+        "timeout": 3
+      }]
+    }],
+    "PostToolUseFailure": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "node \"$CLAUDE_PLUGIN_ROOT\"/scripts/collect-event.mjs tool-error",
+        "timeout": 3
+      }]
+    }],
+    "SubagentStart": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "node \"$CLAUDE_PLUGIN_ROOT\"/scripts/collect-event.mjs agent-start",
+        "timeout": 3
+      }]
+    }],
+    "SubagentStop": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "node \"$CLAUDE_PLUGIN_ROOT\"/scripts/collect-event.mjs agent-stop",
+        "timeout": 3
+      }]
+    }],
+    "SessionEnd": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "node \"$CLAUDE_PLUGIN_ROOT\"/scripts/collect-event.mjs session-end",
+        "timeout": 5
+      }]
+    }]
+  }
+}

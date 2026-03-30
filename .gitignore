@@ -1,0 +1,24 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OMC
+.omc/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test
+coverage/
+
+# Vite
+src/web/.vite/

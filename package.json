@@ -1,0 +1,59 @@
+{
+  "name": "claude-pulse",
+  "version": "0.1.0",
+  "description": "Real-time activity dashboard plugin for Claude Code",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && npm run build:web",
+    "build:web": "cd src/web && npx vite build --outDir ../../dist/web",
+    "dev:web": "cd src/web && npx vite --port 52101",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint src"
+  },
+  "files": [
+    "dist",
+    ".claude-plugin",
+    ".mcp.json",
+    "hooks",
+    "skills",
+    "agents",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "dashboard",
+    "monitoring",
+    "real-time"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "hono": "^4.0.0",
+    "@hono/node-server": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/node": "^22.0.0",
+    "tailwindcss": "^4.0.0",
+    "@tremor/react": "^3.0.0",
+    "zustand": "^5.0.0",
+    "recharts": "^2.0.0",
+    "vitest": "^3.0.0",
+    "eslint": "^9.0.0"
+  }
+}
