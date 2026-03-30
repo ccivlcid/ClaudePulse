@@ -1,72 +1,60 @@
+﻿import { buildAgentSummaries, formatDuration } from '../lib/dashboard.js';
 import { usePulseStore } from '../stores/pulseStore.js';
 
 export default function AgentTracker() {
-  const events = usePulseStore(s => s.events);
-
-  const agents = new Map<string, {
-    agentId: string;
-    agentType: string;
-    status: 'running' | 'done';
-    startTs: string;
-    endTs?: string;
-  }>();
-
-  for (const e of events) {
-    if (e.type === 'agent-start' && e.agentId) {
-      agents.set(e.agentId, {
-        agentId: e.agentId,
-        agentType: e.agentType ?? 'unknown',
-        status: 'running',
-        startTs: e.ts,
-      });
-    }
-    if (e.type === 'agent-stop' && e.agentId) {
-      const a = agents.get(e.agentId);
-      if (a) { a.status = 'done'; a.endTs = e.ts; }
-    }
-  }
-
-  const agentList = [...agents.values()];
-  const running = agentList.filter(a => a.status === 'running').length;
+  const events = usePulseStore((state) => state.events);
+  const agents = buildAgentSummaries(events);
+  const running = agents.filter((agent) => agent.status === 'running').length;
 
   return (
     <div className="card h-[420px] flex flex-col">
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Agents</h2>
-        {running > 0 ? (
-          <span className="text-[12px] nums" style={{ color: 'var(--green)' }}>{running} active</span>
-        ) : (
-          <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{agentList.length}</span>
-        )}
+      <div className="flex items-start justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--border)' }}>
+        <div>
+          <p className="panel-kicker">Subagent Watch</p>
+          <h2 className="panel-title">Agent Tracker</h2>
+          <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+            Running agents, latest task context, and captured tool activity.
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="metric-value text-[26px]">{running}</div>
+          <div className="panel-meta">running now</div>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-[6px]">
-        {agentList.length === 0 ? (
-          <p className="text-[13px] pt-8 text-center" style={{ color: 'var(--text-faint)' }}>No agents</p>
+      <div className="flex-1 overflow-y-auto pt-4 space-y-3 pr-1">
+        {agents.length === 0 ? (
+          <div className="empty-state h-full">
+            <h3>No active agents</h3>
+            <p>Subagent activity will appear here.</p>
+          </div>
         ) : (
-          agentList.map(a => {
-            const elapsed = Math.round(
-              ((a.endTs ? new Date(a.endTs).getTime() : Date.now()) - new Date(a.startTs).getTime()) / 1000
-            );
-            const isRunning = a.status === 'running';
+          agents.map((agent) => {
+            const elapsedMs = (agent.endedAt ? new Date(agent.endedAt).getTime() : Date.now()) - new Date(agent.startedAt).getTime();
+            const summary = ['Read', 'Edit', 'Bash']
+              .map((key) => `${key[0]} ${agent.toolCounts[key] ?? 0}`)
+              .join(' / ');
+
             return (
-              <div
-                key={a.agentId}
-                className="flex items-center justify-between py-2 px-3 rounded-lg text-[12px]"
-                style={{
-                  background: isRunning ? 'color-mix(in srgb, var(--green) 5%, transparent)' : 'transparent',
-                  border: isRunning ? '1px solid color-mix(in srgb, var(--green) 15%, transparent)' : '1px solid var(--border)',
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-[5px] h-[5px] rounded-full ${isRunning ? 'live-pulse' : ''}`}
-                    style={{ background: isRunning ? 'var(--green)' : 'var(--text-faint)' }}
-                  />
-                  <span style={{ color: 'var(--text-secondary)' }}>{a.agentType}</span>
+              <article key={agent.agentId} className="stat-row">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`status-pill ${agent.status === 'running' ? 'is-success' : 'is-neutral'}`}>
+                        {agent.status === 'running' ? 'RUNNING' : 'DONE'}
+                      </span>
+                      <h3 className="text-[13px] font-medium">{agent.agentType}</h3>
+                    </div>
+                    <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                      {agent.currentTask}
+                    </p>
+                  </div>
+                  <span className="panel-meta shrink-0">{formatDuration(elapsedMs)}</span>
                 </div>
-                <span className="nums" style={{ color: 'var(--text-faint)' }}>{elapsed}s</span>
-              </div>
+                <div className="flex flex-wrap gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                  <span className="split-chip">{summary}</span>
+                </div>
+              </article>
             );
           })
         )}

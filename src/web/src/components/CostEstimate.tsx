@@ -1,64 +1,70 @@
+﻿import { calculateCost, TOOL_ACCENTS } from '../lib/dashboard.js';
 import { usePulseStore } from '../stores/pulseStore.js';
 
 export default function CostEstimate() {
-  const events = usePulseStore(s => s.events);
-
-  let totalInputChars = 0;
-  let toolCalls = 0;
-  const toolCounts: Record<string, number> = {};
-
-  for (const e of events) {
-    if (e.type === 'tool-start') {
-      toolCalls++;
-      if (e.toolName) toolCounts[e.toolName] = (toolCounts[e.toolName] ?? 0) + 1;
-      if (e.toolInput) totalInputChars += JSON.stringify(e.toolInput).length;
-    }
-  }
-
-  const inputTokens = Math.round(totalInputChars / 4);
-  const outputTokens = toolCalls * 500;
-  const cost = (inputTokens / 1e6) * 3 + (outputTokens / 1e6) * 15;
-  const low = cost * 0.5;
-  const high = cost * 2.0;
-
-  const sorted = Object.entries(toolCounts).sort(([, a], [, b]) => b - a);
-  const maxCount = sorted[0]?.[1] ?? 1;
+  const events = usePulseStore((state) => state.events);
+  const summary = calculateCost(events);
+  const rows = Object.entries(summary.toolCounts)
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 5);
+  const maxCount = rows[0]?.[1] ?? 1;
 
   return (
-    <div className="card">
-      <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Cost</h2>
-        <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
-          ${low.toFixed(2)}&ndash;${high.toFixed(2)} range
-        </span>
+    <div className="card min-h-[280px] flex flex-col">
+      <div className="flex items-start justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--border)' }}>
+        <div>
+          <p className="panel-kicker">Session Spend</p>
+          <h2 className="panel-title">Cost Snapshot</h2>
+          <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+            Estimate based on tool I/O and recent call distribution.
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="panel-meta">${summary.low.toFixed(2)}-${summary.high.toFixed(2)} range</div>
+          <div className="panel-meta mt-1">{summary.toolCalls} calls</div>
+        </div>
       </div>
 
-      <div className="flex items-baseline gap-1 mb-5">
-        <span className="text-[32px] font-semibold tracking-tight nums">${cost.toFixed(2)}</span>
-        <span className="text-[13px]" style={{ color: 'var(--text-faint)' }}>est.</span>
-      </div>
-
-      <div className="space-y-[6px]">
-        {sorted.slice(0, 5).map(([name, count]) => (
-          <div key={name} className="flex items-center gap-3 text-[12px]">
-            <span className="w-12 shrink-0" style={{ color: 'var(--text-muted)' }}>{name}</span>
-            <div className="flex-1 h-[3px] rounded-full" style={{ background: 'var(--border)' }}>
-              <div
-                className="h-[3px] rounded-full"
-                style={{
-                  width: `${(count / maxCount) * 100}%`,
-                  background: 'var(--text-muted)',
-                }}
-              />
-            </div>
-            <span className="nums w-6 text-right" style={{ color: 'var(--text-secondary)' }}>{count}</span>
+      <div className="pt-4 flex-1 flex flex-col">
+        <div className="flex items-end justify-between gap-4 mb-5">
+          <div>
+            <div className="metric-value text-[34px]">${summary.cost.toFixed(2)}</div>
+            <p className="mt-1 text-[12px]" style={{ color: 'var(--text-muted)' }}>Estimated session cost</p>
           </div>
-        ))}
-      </div>
+          <span className="status-pill is-accent">Tool I/O only</span>
+        </div>
 
-      <p className="text-[11px] mt-4 pt-3" style={{ color: 'var(--text-faint)', borderTop: '1px solid var(--border)' }}>
-        ~30&ndash;60% of actual. Tool I/O only.
-      </p>
+        {rows.length === 0 ? (
+          <div className="empty-state flex-1">
+            <h3>No tool activity yet</h3>
+            <p>Cost and tool mix will appear after the first tool calls.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {rows.map(([name, count]) => (
+              <div key={name} className="space-y-1">
+                <div className="flex items-center justify-between gap-3 text-[12px]">
+                  <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
+                  <span className="nums" style={{ color: 'var(--text-muted)' }}>{count} calls</span>
+                </div>
+                <div className="h-[6px] rounded-full" style={{ background: 'var(--border)' }}>
+                  <div
+                    className="h-[6px] rounded-full"
+                    style={{
+                      width: `${(count / maxCount) * 100}%`,
+                      background: TOOL_ACCENTS[name] ?? 'var(--text-secondary)',
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-4 pt-3 text-[11px]" style={{ color: 'var(--text-faint)', borderTop: '1px solid var(--border)' }}>
+          Real cost may vary. Use this panel for session-to-session comparison, not billing accuracy.
+        </p>
+      </div>
     </div>
   );
 }

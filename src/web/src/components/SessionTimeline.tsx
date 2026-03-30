@@ -1,64 +1,56 @@
+﻿import { buildTimelineMilestones, formatClock } from '../lib/dashboard.js';
 import { usePulseStore } from '../stores/pulseStore.js';
 
-const DOT_COLOR: Record<string, string> = {
-  'session-start': '#22c55e',
-  'session-end': '#52525b',
-  'tool-start': '#60a5fa',
-  'tool-error': '#ef4444',
-  'agent-start': '#22d3ee',
-  'agent-stop': '#0e7490',
-};
+function toneClass(tone: 'neutral' | 'accent' | 'warn' | 'error') {
+  if (tone === 'accent') return 'timeline-dot is-accent';
+  if (tone === 'warn') return 'timeline-dot is-warn';
+  if (tone === 'error') return 'timeline-dot is-error';
+  return 'timeline-dot';
+}
 
 export default function SessionTimeline() {
-  const events = usePulseStore(s => s.events);
-
-  const keyEvents = events.filter(e => e.type !== 'tool-end').slice(-40);
+  const events = usePulseStore((state) => state.events);
+  const milestones = buildTimelineMilestones(events);
 
   return (
     <div className="card h-[420px] flex flex-col">
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Timeline</h2>
-        <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{keyEvents.length}</span>
+      <div className="flex items-start justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--border)' }}>
+        <div>
+          <p className="panel-kicker">Session Story</p>
+          <h2 className="panel-title">Session Timeline</h2>
+          <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+            Key milestones that summarize how the session evolved.
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="metric-value text-[26px]">{milestones.length}</div>
+          <div className="panel-meta">milestones</div>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {keyEvents.length === 0 ? (
-          <p className="text-[13px] pt-8 text-center" style={{ color: 'var(--text-faint)' }}>No events yet</p>
+      <div className="flex-1 overflow-y-auto pt-4">
+        {milestones.length === 0 ? (
+          <div className="empty-state h-full">
+            <h3>No milestones yet</h3>
+            <p>Session milestones will appear as work progresses.</p>
+          </div>
         ) : (
-          <div className="relative pl-5">
-            <div className="absolute left-[3px] top-1 bottom-1 w-px" style={{ background: 'var(--border)' }} />
-
-            {keyEvents.map(e => {
-              const time = new Date(e.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-              const color = DOT_COLOR[e.type] ?? '#3f3f46';
-              const isError = e.type === 'tool-error';
-
-              let label = e.type;
-              if (e.type === 'tool-start') label = e.toolName ?? 'tool';
-              if (e.type === 'tool-error') label = `${e.toolName ?? 'tool'} failed`;
-              if (e.type === 'agent-start') label = `agent ${e.agentType ?? ''}`;
-              if (e.type === 'agent-stop') label = `agent done`;
-              if (e.type === 'session-start') label = 'session start';
-              if (e.type === 'session-end') label = 'session end';
-
-              return (
-                <div key={e.id} className="relative mb-[7px] text-[12px]">
-                  <div
-                    className="absolute -left-[7px] top-[5px] w-[7px] h-[7px] rounded-full"
-                    style={{ background: color }}
-                  />
-                  <div className="flex items-baseline gap-2">
-                    <span className="nums shrink-0" style={{ color: 'var(--text-faint)', fontSize: '11px' }}>{time}</span>
-                    <span style={{ color: isError ? 'var(--red)' : 'var(--text-secondary)' }}>{label}</span>
-                    {e.filePath && (
-                      <span className="truncate" style={{ color: 'var(--text-faint)', fontSize: '11px' }}>
-                        {e.filePath.split('/').slice(-2).join('/')}
-                      </span>
-                    )}
+          <div className="relative pl-5 space-y-4">
+            <div className="absolute left-[9px] top-1 bottom-1 w-px" style={{ background: 'var(--border)' }} />
+            {milestones.map((milestone) => (
+              <article key={milestone.id} className="relative pl-4">
+                <span className={toneClass(milestone.tone)} />
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-[14px] font-medium leading-tight">{milestone.title}</h3>
+                    <p className="mt-1 text-[12px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                      {milestone.summary}
+                    </p>
                   </div>
+                  <span className="panel-meta shrink-0">{formatClock(milestone.ts)}</span>
                 </div>
-              );
-            })}
+              </article>
+            ))}
           </div>
         )}
       </div>

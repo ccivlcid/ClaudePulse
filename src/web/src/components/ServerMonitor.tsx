@@ -1,78 +1,67 @@
-import { useState, useEffect } from 'react';
-
-interface ServerLog {
-  ts: string;
-  level: string;
-  source: string;
-  text: string;
-}
-
-const API_BASE = window.location.origin;
+﻿import { useServerLogs } from '../hooks/useServerLogs.js';
+import { formatClock, summarizeServer } from '../lib/dashboard.js';
+import { usePulseStore } from '../stores/pulseStore.js';
 
 export default function ServerMonitor() {
-  const [logs, setLogs] = useState<ServerLog[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const activeRes = await fetch(`${API_BASE}/api/sessions/active`);
-        if (!activeRes.ok) { setLoading(false); return; }
-        const active = await activeRes.json();
-
-        const logsRes = await fetch(`${API_BASE}/api/sessions/${active.id}/server-logs?lines=50`);
-        const data = await logsRes.json();
-        setLogs(data);
-      } catch { /* ignore */ }
-      setLoading(false);
-    };
-
-    fetchLogs();
-    const interval = setInterval(fetchLogs, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const activeSessionId = usePulseStore((state) => state.activeSessionId);
+  const { logs, loading } = useServerLogs(activeSessionId, 50);
+  const summary = summarizeServer(logs);
 
   return (
-    <div className="card h-[360px] flex flex-col">
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Server</h2>
-        <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{logs.length} lines</span>
+    <div className="card h-[420px] flex flex-col">
+      <div className="flex items-start justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--border)' }}>
+        <div>
+          <p className="panel-kicker">Diagnostics</p>
+          <h2 className="panel-title">Server Summary & Logs</h2>
+          <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+            Request activity, response time, and recent server warnings in one view.
+          </p>
+        </div>
+        <span className={`status-pill ${summary.status === 'ERROR' ? 'is-error' : summary.status === 'WARN' ? 'is-warn' : summary.status === 'LIVE' ? 'is-success' : 'is-neutral'}`}>
+          {summary.status}
+        </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto font-mono text-[11px]">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-4 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="summary-stat">
+          <span className="metric-label">Requests</span>
+          <strong className="metric-value text-[20px]">{summary.requestCount}</strong>
+        </div>
+        <div className="summary-stat">
+          <span className="metric-label">Avg Response</span>
+          <strong className="metric-value text-[20px]">{summary.avgResponseTime !== null ? `${summary.avgResponseTime}ms` : '--'}</strong>
+        </div>
+        <div className="summary-stat">
+          <span className="metric-label">Port</span>
+          <strong className="metric-value text-[20px]">{summary.port ?? '--'}</strong>
+        </div>
+        <div className="summary-stat">
+          <span className="metric-label">Latest Issue</span>
+          <strong className="metric-value text-[20px]">{summary.latestIssue ? formatClock(summary.latestIssue.ts) : '--'}</strong>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto pt-4 pr-1 font-mono text-[11px] space-y-2">
         {loading ? (
-          <p className="text-[13px] pt-8 text-center font-sans" style={{ color: 'var(--text-faint)' }}>Loading...</p>
+          <div className="empty-state h-full font-sans">
+            <h3>Loading server logs</h3>
+            <p>Recent server output will appear here.</p>
+          </div>
         ) : logs.length === 0 ? (
-          <p className="text-[13px] pt-8 text-center font-sans" style={{ color: 'var(--text-faint)' }}>
-            No server running
-          </p>
+          <div className="empty-state h-full font-sans">
+            <h3>No server running</h3>
+            <p>Start a dev server to monitor logs and errors.</p>
+          </div>
         ) : (
-          <table className="w-full">
-            <tbody>
-              {logs.map((log, i) => {
-                const time = new Date(log.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                const isError = log.level === 'error';
-                const isWarn = log.level === 'warn';
-                return (
-                  <tr key={i}>
-                    <td className="py-[2px] pr-2 nums whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>{time}</td>
-                    {(isError || isWarn) && (
-                      <td className="py-[2px] pr-2 whitespace-nowrap" style={{ color: isError ? 'var(--red)' : 'var(--accent)' }}>
-                        {isError ? 'ERR' : 'WRN'}
-                      </td>
-                    )}
-                    <td
-                      className="py-[2px]"
-                      style={{ color: isError ? 'var(--red)' : isWarn ? 'var(--accent)' : 'var(--text-muted)' }}
-                      colSpan={isError || isWarn ? 1 : 2}
-                    >
-                      {log.text}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          logs.slice().reverse().map((log, index) => (
+            <div key={`${log.ts}-${index}`} className={`log-row ${log.level === 'error' ? 'is-error' : log.level === 'warn' ? 'is-warn' : ''}`}>
+              <span className="nums shrink-0">{formatClock(log.ts)}</span>
+              <span className={`status-pill ${log.level === 'error' ? 'is-error' : log.level === 'warn' ? 'is-warn' : 'is-neutral'}`}>
+                {log.level.toUpperCase()}
+              </span>
+              <span className="min-w-0 break-all">{log.text}</span>
+            </div>
+          ))
         )}
       </div>
     </div>
