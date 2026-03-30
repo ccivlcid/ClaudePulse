@@ -1,5 +1,9 @@
+import fs from 'node:fs';
 import { getSessionStats, getFileHeatmap, getAgentStatus, getTimeline, readSessionEvents } from '../data/reader.js';
 import { getActiveSession } from '../data/index-manager.js';
+import { getServerLogPath } from '../data/writer.js';
+import { startServer, stopServer, getServerStatus } from '../server-monitor/process-manager.js';
+import { detectLevel } from '../server-monitor/error-detector.js';
 
 type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
 
@@ -120,20 +124,74 @@ export function pulseTimeline(params: { sessionId?: string }): ToolResult {
   return text(`── Timeline ──\n${lines.join('\n')}`);
 }
 
-export function pulseServerLogs(_params: { lines?: number; sessionId?: string }): ToolResult {
-  return text('모니터링 중인 서버 없음. pulse_start_server로 시작해주세요.');
+function readServerLogs(sessionId: string): { ts: string; level: string; text: string }[] {
+  const logPath = getServerLogPath(sessionId);
+  try {
+    const raw = fs.readFileSync(logPath, 'utf-8');
+    const lines = raw.trim().split('\n');
+    const entries: { ts: string; level: string; text: string }[] = [];
+    for (const line of lines) {
+      if (!line) continue;
+      try { entries.push(JSON.parse(line)); } catch { /* skip */ }
+    }
+    return entries;
+  } catch {
+    return [];
+  }
 }
 
-export function pulseServerErrors(_params: { since?: string; sessionId?: string }): ToolResult {
-  return text('모니터링 중인 서버 없음. pulse_start_server로 시작해주세요.');
+export function pulseServerLogs(params: { lines?: number; sessionId?: string }): ToolResult {
+  const sid = resolveSessionId(params.sessionId);
+  if (!sid) return error('활성 세션이 없습니다.');
+
+  const status = getServerStatus();
+  if (!status) return text('모니터링 중인 서버 없음. pulse_start_server로 시작해주세요.');
+
+  const logs = readServerLogs(sid);
+  const recent = logs.slice(-(params.lines ?? 50));
+  if (recent.length === 0) return text('서버 로그가 비어있습니다.');
+
+  const lines = recent.map(l => {
+    const time = new Date(l.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const prefix = l.level === 'error' ? '[ERR]' : l.level === 'warn' ? '[WRN]' : '     ';
+    return `${time} ${prefix} ${l.text}`;
+  });
+
+  return text(`── Server Logs (최근 ${recent.length}줄) ──\n${lines.join('\n')}`);
+}
+
+export function pulseServerErrors(params: { since?: string; sessionId?: string }): ToolResult {
+  const sid = resolveSessionId(params.sessionId);
+  if (!sid) return error('활성 세션이 없습니다.');
+
+  const status = getServerStatus();
+  if (!status) return text('모니터링 중인 서버 없음. pulse_start_server로 시작해주세요.');
+
+  const logs = readServerLogs(sid);
+  const sinceCutoff = params.since ? new Date(params.since).getTime() : 0;
+  const errors = logs.filter(l => l.level === 'error' && new Date(l.ts).getTime() >= sinceCutoff);
+
+  if (errors.length === 0) return text('서버 에러 없음 ✓');
+
+  const lines = errors.map(l => {
+    const time = new Date(l.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return `[ERROR] ${time}  ${l.text}`;
+  });
+
+  return text(`── Server Errors (${errors.length}건) ──\n${lines.join('\n')}`);
 }
 
 export function pulseStartServer(params: { command: string; port?: number }): ToolResult {
-  return text(`[미구현] pulse_start_server는 Phase 3에서 구현 예정입니다. command: ${params.command}`);
+  const sid = resolveSessionId();
+  if (!sid) return error('활성 세션이 없습니다.');
+
+  const result = startServer(sid, params.command, params.port);
+  return text(result.message);
 }
 
 export function pulseStopServer(): ToolResult {
-  return text('모니터링 중인 서버 없음.');
+  const result = stopServer();
+  return text(result.message);
 }
 
 export function pulseOpenDashboard(params: { port?: number }): ToolResult {

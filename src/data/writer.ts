@@ -42,7 +42,7 @@ export function appendEvent(sessionId: string, event: PulseEvent): void {
   fs.appendFileSync(filePath, JSON.stringify(event) + '\n');
 }
 
-export function appendServerLog(sessionId: string, log: Record<string, unknown>): void {
+export function appendServerLog(sessionId: string, log: Record<string, unknown> | object): void {
   ensureDirectories();
   const filePath = getServerLogPath(sessionId);
   fs.appendFileSync(filePath, JSON.stringify(log) + '\n');
