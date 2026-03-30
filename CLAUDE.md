@@ -24,7 +24,7 @@ Web Dashboard → Hono API (JSONL 읽기 + SSE 스트림) → React UI
 | Realtime | SSE (Server-Sent Events) | 브라우저 네이티브 EventSource |
 | Frontend | React 19 + Vite | latest |
 | Styling | Tailwind CSS 4 | latest |
-| Charts/UI | Tremor | latest |
+| Charts | Recharts | latest |
 | State | Zustand | latest |
 
 ## Critical Rules
@@ -56,10 +56,12 @@ Web Dashboard → Hono API (JSONL 읽기 + SSE 스트림) → React UI
 ## JSONL Event Format
 
 ```jsonl
-{"id":"uuid","ts":"ISO8601","type":"tool-start","tool":"Read","file":"src/auth.ts","session":"session-id","project":"/path"}
+{"id":"uuid","ts":"ISO8601","type":"tool-start","sessionId":"uuid","toolName":"Read","toolUseId":"toolu_xxx","filePath":"src/auth.ts","projectDir":"/path"}
 ```
 
 type 값: `session-start`, `session-end`, `tool-start`, `tool-end`, `tool-error`, `agent-start`, `agent-stop`
+
+> 필드명은 `docs/data-schema.md`의 PulseEvent 스키마를 따름. Hook stdin 실측 데이터 기반.
 
 ## Plugin Structure
 

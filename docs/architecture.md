@@ -23,7 +23,7 @@ Claude Code CLI
 │   │ Web Dashboard (:52101)                         │   │
 │   │ - Hono (API + 정적 서빙)                        │◄──┘
 │   │ - SSE (Server-Sent Events, 실시간 단방향 스트림)  │
-│   │ - React + Tailwind + Tremor                    │
+│   │ - React + Tailwind + Recharts                  │
 │   └────────────────────────────────────────────────┘
 │
 ├── Dev Server (사용자 앱)
@@ -62,7 +62,7 @@ Claude Code CLI
 | 실시간 갱신 | SSE (Server-Sent Events) | 단방향으로 충분, 브라우저 네이티브 |
 | Frontend | React 19 + Vite | 빠른 개발, 정적 서빙 가능 |
 | 스타일링 | Tailwind CSS 4 | 유틸리티 기반 |
-| 차트/UI | Tremor | 대시보드 특화 컴포넌트 |
+| 차트 | Recharts | React 네이티브, SVG 기반, React 19 호환 |
 | 상태 관리 | Zustand | 심플, 보일러플레이트 최소 |
 | 로그 파싱 | Custom parser | 서버 종류별 로그 포맷 대응 |
 

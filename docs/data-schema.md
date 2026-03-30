@@ -222,6 +222,57 @@ interface PulseEvent {
 
 ---
 
+## 설계 고려사항
+
+### index.json 동시 쓰기
+
+index.json은 read-modify-write 패턴이므로 동시 접근 시 데이터 손실 가능.
+
+- **해결**: write 시 임시 파일에 쓴 후 `fs.renameSync`로 원자적 교체
+- **충돌 최소화**: index.json 갱신은 session-start/session-end에서만 (빈도 낮음)
+- JSONL은 append-only이므로 동시 쓰기 안전
+
+### JSONL 파싱 에러 처리
+
+`collect-event.mjs`가 중간에 크래시하면 불완전한 줄이 남을 수 있음.
+
+- **reader.ts**: 줄 단위로 `JSON.parse` 시도, 실패한 줄은 **skip** (조용히 무시)
+- 파일 전체를 버리지 않음. 정상 줄만 처리
+
+### Windows 경로 정규화
+
+Hook stdin의 경로는 OS에 따라 다름 (`C:\\Users\\...` vs `/home/user/...`).
+
+- **저장 시**: stdin에서 받은 경로를 **그대로 저장** (변환하지 않음)
+- **비교 시**: `path.normalize()` 사용하여 슬래시 통일
+- **표시 시**: 대시보드에서 프로젝트 루트 기준 상대 경로로 표시
+
+### SSE 이벤트 포맷
+
+Dashboard가 사용하는 `/api/sse` 엔드포인트의 이벤트 형태:
+
+```
+event: pulse-event
+data: {"id":"a1b2","ts":"...","type":"tool-start","toolName":"Read",...}
+
+event: pulse-event
+data: {"id":"a1b3","ts":"...","type":"tool-end","toolName":"Read",...}
+```
+
+- 이벤트 이름: `pulse-event` (모든 PulseEvent 동일)
+- data: PulseEvent JSON (JSONL에 저장하는 것과 동일한 형태)
+- 클라이언트: `new EventSource('/api/sse')` → `event.data`를 JSON.parse
+- 재연결: EventSource 기본 동작 (자동 재연결). 서버는 `Last-Event-ID` 헤더로 이어서 전송
+
+### 현재 세션 식별
+
+MCP 도구에서 `sessionId`가 생략되면 "현재 세션"을 사용해야 함.
+
+- **방법**: index.json에서 `endedAt`이 null인 세션 = 활성 세션
+- 활성 세션이 여러 개면 가장 최근 `startedAt` 기준
+
+---
+
 ## 데이터 보존 정책
 
 아래는 `config.json`의 **기본값**이며, 사용자가 자유롭게 수정 가능.
