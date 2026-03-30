@@ -21,32 +21,40 @@ export default function FileHeatmap() {
   const maxTotal = files[0]?.total ?? 1;
 
   return (
-    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 h-[480px] flex flex-col">
-      <h2 className="text-sm font-semibold text-gray-400 mb-3">File Heatmap</h2>
-      <div className="flex-1 overflow-y-auto space-y-1.5 text-xs">
-        {files.length === 0 && (
-          <p className="text-gray-600 italic">No file access yet</p>
+    <div className="rounded-xl p-5 h-[420px] flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Files</h2>
+        <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{files.length}</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-[10px] text-[12px]">
+        {files.length === 0 ? (
+          <p className="text-[13px] pt-8 text-center" style={{ color: 'var(--text-faint)' }}>No file access yet</p>
+        ) : (
+          files.map((f, i) => {
+            const pct = (f.total / maxTotal) * 100;
+            const shortPath = f.path.split('/').slice(-2).join('/');
+            return (
+              <div key={f.path}>
+                <div className="flex items-baseline justify-between mb-[3px]">
+                  <span className="truncate" style={{ color: i === 0 ? 'var(--text-primary)' : 'var(--text-secondary)' }} title={f.path}>
+                    {shortPath}
+                  </span>
+                  <span className="nums shrink-0 ml-3" style={{ color: 'var(--text-muted)' }}>{f.total}</span>
+                </div>
+                <div className="h-[3px] rounded-full" style={{ background: 'var(--border)' }}>
+                  <div
+                    className="h-[3px] rounded-full transition-all duration-300"
+                    style={{
+                      width: `${pct}%`,
+                      background: i === 0 ? 'var(--accent)' : 'var(--text-faint)',
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })
         )}
-        {files.map(f => {
-          const pct = (f.total / maxTotal) * 100;
-          const shortPath = f.path.split('/').slice(-2).join('/');
-          return (
-            <div key={f.path}>
-              <div className="flex justify-between mb-0.5">
-                <span className="text-gray-300 truncate" title={f.path}>{shortPath}</span>
-                <span className="text-gray-500 shrink-0 ml-2">
-                  R:{f.read} E:{f.edit} W:{f.write}
-                </span>
-              </div>
-              <div className="w-full bg-gray-800 rounded-full h-1.5">
-                <div
-                  className="bg-gradient-to-r from-blue-600 to-orange-500 h-1.5 rounded-full"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

@@ -1,9 +1,11 @@
 import fs from 'node:fs';
+import { exec } from 'node:child_process';
 import { getSessionStats, getFileHeatmap, getAgentStatus, getTimeline, readSessionEvents } from '../data/reader.js';
 import { getActiveSession } from '../data/index-manager.js';
 import { getServerLogPath } from '../data/writer.js';
 import { startServer, stopServer, getServerStatus } from '../server-monitor/process-manager.js';
 import { detectLevel } from '../server-monitor/error-detector.js';
+import { startDashboard } from '../web/server.js';
 
 type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
 
@@ -194,6 +196,27 @@ export function pulseStopServer(): ToolResult {
   return text(result.message);
 }
 
+let dashboardRunning = false;
+
 export function pulseOpenDashboard(params: { port?: number }): ToolResult {
-  return text(`[미구현] pulse_open_dashboard는 Phase 4에서 구현 예정입니다. port: ${params.port ?? 52101}`);
+  const port = params.port ?? parseInt(process.env.PULSE_DASHBOARD_PORT ?? '52101', 10);
+  const url = `http://localhost:${port}`;
+
+  if (!dashboardRunning) {
+    try {
+      startDashboard(port);
+      dashboardRunning = true;
+    } catch (err) {
+      return error(`Dashboard 시작 실패: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // Open browser (cross-platform)
+  const platform = process.platform;
+  const cmd = platform === 'win32' ? `start "" "${url}"`
+    : platform === 'darwin' ? `open "${url}"`
+    : `xdg-open "${url}"`;
+  exec(cmd, () => { /* ignore errors - browser open is best-effort */ });
+
+  return text(`Claude Pulse Dashboard: ${url}`);
 }

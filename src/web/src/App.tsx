@@ -13,61 +13,79 @@ export default function App() {
   useSessions();
   usePulseSSE();
 
-  const { connected, activeSessionId, events } = usePulseStore();
+  const { connected, activeSessionId, events, theme, toggleTheme } = usePulseStore();
+
+  const toolCount = events.filter(e => e.type === 'tool-start').length;
+  const errorCount = events.filter(e => e.type === 'tool-error').length;
+  const elapsed = events.length > 0
+    ? Math.round((Date.now() - new Date(events[0].ts).getTime()) / 60000)
+    : 0;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
       {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xl font-bold tracking-tight">Claude Pulse</span>
-          <span className="text-xs text-gray-500">v0.1.0</span>
+      <header className="h-14 flex items-center justify-between px-6" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="flex items-center gap-6">
+          <span className="text-[15px] font-semibold tracking-[-0.01em]">Claude Pulse</span>
+
+          {activeSessionId && (
+            <nav className="hidden sm:flex items-center gap-1 text-[13px]" style={{ color: 'var(--text-muted)' }}>
+              <span className="nums">{elapsed}m</span>
+              <span style={{ color: 'var(--text-faint)' }}>/</span>
+              <span className="nums">{toolCount} calls</span>
+              {errorCount > 0 && (
+                <>
+                  <span style={{ color: 'var(--text-faint)' }}>/</span>
+                  <span style={{ color: 'var(--red)' }} className="nums">{errorCount} err</span>
+                </>
+              )}
+            </nav>
+          )}
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-gray-400">
-            {activeSessionId ? `Session: ${activeSessionId.slice(0, 8)}...` : 'No session'}
-          </span>
-          <span className={`flex items-center gap-1.5 ${connected ? 'text-green-400' : 'text-red-400'}`}>
-            <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
-            {connected ? 'Live' : 'Disconnected'}
-          </span>
-          <span className="text-gray-500">{events.length} events</span>
+
+        <div className="flex items-center gap-4 text-[13px]">
+          {activeSessionId && (
+            <span className="font-mono nums" style={{ color: 'var(--text-faint)', fontSize: '12px' }}>
+              {activeSessionId.slice(0, 8)}
+            </span>
+          )}
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-[6px] h-[6px] rounded-full ${connected ? 'live-pulse' : ''}`}
+              style={{ background: connected ? 'var(--green)' : 'var(--red)' }}
+            />
+            <span style={{ color: connected ? 'var(--text-secondary)' : 'var(--red)' }}>
+              {connected ? 'Live' : 'Offline'}
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* Dashboard Grid */}
-      <main className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-[1600px] mx-auto">
-        {/* Row 1: Activity + Agent */}
-        <div>
+      {/* Grid */}
+      <main className="p-4 lg:p-5 max-w-[1680px] mx-auto grid grid-cols-12 gap-3 lg:gap-4">
+        <div className="col-span-12 lg:col-span-7 xl:col-span-8">
           <ActivityStream />
         </div>
-        <div>
-          <AgentTracker />
-        </div>
 
-        {/* Row 2: Timeline + Errors */}
-        <div>
-          <SessionTimeline />
-        </div>
-        <div>
+        <div className="col-span-12 lg:col-span-5 xl:col-span-4 flex flex-col gap-3 lg:gap-4">
+          <CostEstimate />
           <ErrorPanel />
         </div>
 
-        {/* Row 3: File Heatmap + Cost */}
-        <div>
+        <div className="col-span-12 md:col-span-4">
+          <SessionTimeline />
+        </div>
+        <div className="col-span-12 md:col-span-4">
           <FileHeatmap />
         </div>
-        <div>
-          <CostEstimate />
+        <div className="col-span-12 md:col-span-4">
+          <AgentTracker />
         </div>
 
-        {/* Row 4: Server Monitor (full width) */}
-        <div className="lg:col-span-2">
+        <div className="col-span-12 lg:col-span-6">
           <ServerMonitor />
         </div>
-
-        {/* Row 5: Project Comparison (full width) */}
-        <div className="lg:col-span-2">
+        <div className="col-span-12 lg:col-span-6">
           <ProjectComparison />
         </div>
       </main>

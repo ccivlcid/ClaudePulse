@@ -33,28 +33,47 @@ export default function ServerMonitor() {
   }, []);
 
   return (
-    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 h-[480px] flex flex-col">
-      <h2 className="text-sm font-semibold text-gray-400 mb-3">Server Monitor</h2>
-      <div className="flex-1 overflow-y-auto font-mono text-xs space-y-0.5">
-        {loading && <p className="text-gray-600 italic">Loading...</p>}
-        {!loading && logs.length === 0 && (
-          <p className="text-gray-600 italic">No server running. Use pulse_start_server to start.</p>
+    <div className="rounded-xl p-5 h-[360px] flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Server</h2>
+        <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{logs.length} lines</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto font-mono text-[11px]">
+        {loading ? (
+          <p className="text-[13px] pt-8 text-center font-sans" style={{ color: 'var(--text-faint)' }}>Loading...</p>
+        ) : logs.length === 0 ? (
+          <p className="text-[13px] pt-8 text-center font-sans" style={{ color: 'var(--text-faint)' }}>
+            No server running
+          </p>
+        ) : (
+          <table className="w-full">
+            <tbody>
+              {logs.map((log, i) => {
+                const time = new Date(log.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const isError = log.level === 'error';
+                const isWarn = log.level === 'warn';
+                return (
+                  <tr key={i}>
+                    <td className="py-[2px] pr-2 nums whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>{time}</td>
+                    {(isError || isWarn) && (
+                      <td className="py-[2px] pr-2 whitespace-nowrap" style={{ color: isError ? 'var(--red)' : '#eab308' }}>
+                        {isError ? 'ERR' : 'WRN'}
+                      </td>
+                    )}
+                    <td
+                      className="py-[2px]"
+                      style={{ color: isError ? '#fca5a5' : isWarn ? '#fde68a' : 'var(--text-muted)' }}
+                      colSpan={isError || isWarn ? 1 : 2}
+                    >
+                      {log.text}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
-        {logs.map((log, i) => {
-          const time = new Date(log.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-          const levelColor = log.level === 'error' ? 'text-red-400' : log.level === 'warn' ? 'text-yellow-400' : 'text-gray-400';
-          return (
-            <div key={i} className="flex gap-2">
-              <span className="text-gray-600 shrink-0">{time}</span>
-              <span className={`shrink-0 ${levelColor}`}>
-                {log.level === 'error' ? '[ERR]' : log.level === 'warn' ? '[WRN]' : '     '}
-              </span>
-              <span className={log.level === 'error' ? 'text-red-300' : 'text-gray-300'}>
-                {log.text}
-              </span>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

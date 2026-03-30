@@ -9,7 +9,6 @@ export default function AgentTracker() {
     status: 'running' | 'done';
     startTs: string;
     endTs?: string;
-    tools: Record<string, number>;
   }>();
 
   for (const e of events) {
@@ -19,7 +18,6 @@ export default function AgentTracker() {
         agentType: e.agentType ?? 'unknown',
         status: 'running',
         startTs: e.ts,
-        tools: {},
       });
     }
     if (e.type === 'agent-stop' && e.agentId) {
@@ -29,38 +27,49 @@ export default function AgentTracker() {
   }
 
   const agentList = [...agents.values()];
+  const running = agentList.filter(a => a.status === 'running').length;
 
   return (
-    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 h-[480px] flex flex-col">
-      <h2 className="text-sm font-semibold text-gray-400 mb-3">Agent Tracker</h2>
-      <div className="flex-1 overflow-y-auto space-y-2 text-xs">
-        {agentList.length === 0 && (
-          <p className="text-gray-600 italic">No agents</p>
+    <div className="rounded-xl p-5 h-[420px] flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Agents</h2>
+        {running > 0 ? (
+          <span className="text-[12px] nums" style={{ color: 'var(--green)' }}>{running} active</span>
+        ) : (
+          <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{agentList.length}</span>
         )}
-        {agentList.map(a => {
-          const elapsed = Math.round(
-            ((a.endTs ? new Date(a.endTs).getTime() : Date.now()) - new Date(a.startTs).getTime()) / 1000
-          );
-          return (
-            <div key={a.agentId} className="border border-gray-800 rounded p-2">
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                  a.status === 'running'
-                    ? 'bg-green-900 text-green-300'
-                    : 'bg-gray-800 text-gray-400'
-                }`}>
-                  {a.status === 'running' ? 'RUNNING' : 'DONE'}
-                </span>
-                <span className="text-gray-300">{a.agentType}</span>
-              </div>
-              <div className="text-gray-500">{elapsed}s elapsed</div>
-            </div>
-          );
-        })}
       </div>
-      <div className="mt-2 text-xs text-gray-500 border-t border-gray-800 pt-2">
-        Active: {agentList.filter(a => a.status === 'running').length} |
-        Done: {agentList.filter(a => a.status === 'done').length}
+
+      <div className="flex-1 overflow-y-auto space-y-[6px]">
+        {agentList.length === 0 ? (
+          <p className="text-[13px] pt-8 text-center" style={{ color: 'var(--text-faint)' }}>No agents</p>
+        ) : (
+          agentList.map(a => {
+            const elapsed = Math.round(
+              ((a.endTs ? new Date(a.endTs).getTime() : Date.now()) - new Date(a.startTs).getTime()) / 1000
+            );
+            const isRunning = a.status === 'running';
+            return (
+              <div
+                key={a.agentId}
+                className="flex items-center justify-between py-2 px-3 rounded-lg text-[12px]"
+                style={{
+                  background: isRunning ? 'rgba(34, 197, 94, 0.04)' : 'transparent',
+                  border: isRunning ? '1px solid rgba(34, 197, 94, 0.12)' : '1px solid var(--border)',
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`w-[5px] h-[5px] rounded-full ${isRunning ? 'live-pulse' : ''}`}
+                    style={{ background: isRunning ? 'var(--green)' : 'var(--text-faint)' }}
+                  />
+                  <span style={{ color: 'var(--text-secondary)' }}>{a.agentType}</span>
+                </div>
+                <span className="nums" style={{ color: 'var(--text-faint)' }}>{elapsed}s</span>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

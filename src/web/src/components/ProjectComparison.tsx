@@ -3,7 +3,6 @@ import { usePulseStore } from '../stores/pulseStore.js';
 export default function ProjectComparison() {
   const sessions = usePulseStore(s => s.sessions);
 
-  // Group by project
   const projects = new Map<string, { project: string; sessions: number; tools: number; agents: number; errors: number }>();
   for (const s of sessions) {
     const key = s.project;
@@ -21,33 +20,37 @@ export default function ProjectComparison() {
   const sorted = [...projects.values()].sort((a, b) => b.tools - a.tools);
 
   return (
-    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
-      <h2 className="text-sm font-semibold text-gray-400 mb-3">Project Comparison</h2>
+    <div className="rounded-xl p-5 h-[360px] flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Projects</h2>
+        <span className="text-[12px] nums" style={{ color: 'var(--text-faint)' }}>{sorted.length}</span>
+      </div>
+
       {sorted.length === 0 ? (
-        <p className="text-gray-600 italic text-xs">No session data</p>
+        <p className="text-[13px] pt-8 text-center" style={{ color: 'var(--text-faint)' }}>No data</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-[12px]">
             <thead>
-              <tr className="text-gray-500 border-b border-gray-800">
-                <th className="text-left py-2 pr-4">Project</th>
-                <th className="text-right py-2 px-3">Sessions</th>
-                <th className="text-right py-2 px-3">Tools</th>
-                <th className="text-right py-2 px-3">Agents</th>
-                <th className="text-right py-2 px-3">Errors</th>
+              <tr style={{ color: 'var(--text-faint)' }}>
+                <th className="text-left py-2 pr-4 font-normal">Project</th>
+                <th className="text-right py-2 px-2 font-normal w-16">Sessions</th>
+                <th className="text-right py-2 px-2 font-normal w-16">Tools</th>
+                <th className="text-right py-2 px-2 font-normal w-16">Agents</th>
+                <th className="text-right py-2 pl-2 font-normal w-16">Errors</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map(p => (
-                <tr key={p.project} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                  <td className="py-2 pr-4 text-gray-300 truncate max-w-xs" title={p.project}>
+                <tr key={p.project} className="hover:bg-white/[0.015]" style={{ borderTop: '1px solid var(--border)' }}>
+                  <td className="py-2 pr-4 truncate max-w-[200px] font-mono" style={{ color: 'var(--text-secondary)' }} title={p.project}>
                     {p.project.split('/').slice(-2).join('/')}
                   </td>
-                  <td className="text-right py-2 px-3 text-gray-400">{p.sessions}</td>
-                  <td className="text-right py-2 px-3 text-gray-300">{p.tools}</td>
-                  <td className="text-right py-2 px-3 text-gray-400">{p.agents}</td>
-                  <td className="text-right py-2 px-3">
-                    <span className={p.errors > 0 ? 'text-red-400' : 'text-gray-500'}>{p.errors}</span>
+                  <td className="text-right py-2 px-2 nums" style={{ color: 'var(--text-muted)' }}>{p.sessions}</td>
+                  <td className="text-right py-2 px-2 nums font-medium" style={{ color: 'var(--text-primary)' }}>{p.tools}</td>
+                  <td className="text-right py-2 px-2 nums" style={{ color: 'var(--text-muted)' }}>{p.agents}</td>
+                  <td className="text-right py-2 pl-2 nums" style={{ color: p.errors > 0 ? 'var(--red)' : 'var(--text-faint)' }}>
+                    {p.errors}
                   </td>
                 </tr>
               ))}

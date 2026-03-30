@@ -22,43 +22,43 @@ export default function CostEstimate() {
   const high = cost * 2.0;
 
   const sorted = Object.entries(toolCounts).sort(([, a], [, b]) => b - a);
+  const maxCount = sorted[0]?.[1] ?? 1;
 
   return (
-    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 h-[480px] flex flex-col">
-      <h2 className="text-sm font-semibold text-gray-400 mb-3">Cost Estimate</h2>
-      <div className="flex-1">
-        <div className="text-2xl font-bold text-white mb-1">
-          ~${cost.toFixed(2)}
-        </div>
-        <div className="text-xs text-gray-500 mb-4">
-          Range: ${low.toFixed(2)} ~ ${high.toFixed(2)}
-        </div>
+    <div className="rounded-xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div className="flex items-baseline justify-between mb-5">
+        <h2 className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>Cost</h2>
+        <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+          ${low.toFixed(2)}&ndash;${high.toFixed(2)} range
+        </span>
+      </div>
 
-        <div className="mb-4">
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>Tool Calls</span>
-            <span>{toolCalls}</span>
-          </div>
-          <div className="w-full bg-gray-800 rounded-full h-2">
-            <div
-              className="bg-emerald-500 h-2 rounded-full transition-all"
-              style={{ width: `${Math.min((toolCalls / 100) * 100, 100)}%` }}
-            />
-          </div>
-        </div>
+      <div className="flex items-baseline gap-1 mb-5">
+        <span className="text-[32px] font-semibold tracking-tight nums">${cost.toFixed(2)}</span>
+        <span className="text-[13px]" style={{ color: 'var(--text-faint)' }}>est.</span>
+      </div>
 
-        <div className="space-y-1 text-xs">
-          {sorted.slice(0, 6).map(([name, count]) => (
-            <div key={name} className="flex justify-between">
-              <span className="text-gray-400">{name}</span>
-              <span className="text-gray-300">{count}</span>
+      <div className="space-y-[6px]">
+        {sorted.slice(0, 5).map(([name, count]) => (
+          <div key={name} className="flex items-center gap-3 text-[12px]">
+            <span className="w-12 shrink-0" style={{ color: 'var(--text-muted)' }}>{name}</span>
+            <div className="flex-1 h-[3px] rounded-full" style={{ background: 'var(--border)' }}>
+              <div
+                className="h-[3px] rounded-full"
+                style={{
+                  width: `${(count / maxCount) * 100}%`,
+                  background: 'var(--text-muted)',
+                }}
+              />
             </div>
-          ))}
-        </div>
+            <span className="nums w-6 text-right" style={{ color: 'var(--text-secondary)' }}>{count}</span>
+          </div>
+        ))}
       </div>
-      <div className="text-[10px] text-gray-600 border-t border-gray-800 pt-2 mt-2">
-        Estimated 30-60% of actual cost
-      </div>
+
+      <p className="text-[11px] mt-4 pt-3" style={{ color: 'var(--text-faint)', borderTop: '1px solid var(--border)' }}>
+        ~30&ndash;60% of actual. Tool I/O only.
+      </p>
     </div>
   );
 }
