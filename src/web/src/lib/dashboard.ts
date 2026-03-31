@@ -92,11 +92,19 @@ const RESPONSE_MS_RE = /\b(\d+)ms\b/;
 
 export function formatClock(ts?: string | null): string {
   if (!ts) return '--:--:--';
-  return new Date(ts).toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  const d = new Date(ts);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const s = String(d.getSeconds()).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
+export function formatClockShort(ts?: string | null): string {
+  if (!ts) return '--:--';
+  const d = new Date(ts);
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const s = String(d.getSeconds()).padStart(2, '0');
+  return `${m}:${s}`;
 }
 
 export function formatDuration(ms: number): string {
@@ -376,23 +384,34 @@ export interface TokenUsageSummary {
   toolBreakdown: { tool: string; input: number; output: number; calls: number }[];
 }
 
+// Average output tokens per tool (when tool-end has no response data)
 const AVG_OUTPUT_TOKENS: Record<string, number> = {
-  Read: 800,
-  Edit: 200,
-  Write: 150,
-  Bash: 600,
-  Grep: 400,
-  Glob: 200,
-  Agent: 1200,
-  Search: 500,
+  Read: 1200,
+  Edit: 300,
+  Write: 200,
+  Bash: 800,
+  Grep: 600,
+  Glob: 300,
+  Agent: 2000,
+  Search: 800,
 };
 
+// Per-call overhead: system prompt fragment + conversation context that Claude
+// processes each time it decides to call a tool. This accounts for the tokens
+// we cannot observe through hooks (system prompt, chat history, reasoning).
+const OVERHEAD_PER_CALL = 800;
+
+// Baseline tokens for session infrastructure (system prompt, CLAUDE.md, etc.)
+const SESSION_BASELINE = 4000;
+
 function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  // Mixed content (code + natural language) averages ~3.2 chars/token
+  return Math.ceil(text.length / 3.2);
 }
 
 export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
   const toolMap = new Map<string, { input: number; output: number; calls: number }>();
+  let totalCalls = 0;
 
   for (const event of events) {
     if (event.type !== 'tool-start' && event.type !== 'tool-end') continue;
@@ -405,6 +424,7 @@ export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
 
     if (event.type === 'tool-start') {
       entry.calls += 1;
+      totalCalls += 1;
       if (event.toolInput) {
         entry.input += estimateTokens(JSON.stringify(event.toolInput));
       }
@@ -417,7 +437,7 @@ export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
       } else if (resp?.stderr) {
         entry.output += estimateTokens(resp.stderr);
       } else {
-        entry.output += AVG_OUTPUT_TOKENS[tool] ?? 300;
+        entry.output += AVG_OUTPUT_TOKENS[tool] ?? 400;
       }
     }
   }
@@ -433,6 +453,10 @@ export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
       toolBreakdown.push({ tool, ...data });
     }
   }
+
+  // Add estimated overhead for conversation context and system prompt
+  const overhead = SESSION_BASELINE + (totalCalls * OVERHEAD_PER_CALL);
+  inputTokens += overhead;
 
   toolBreakdown.sort((a, b) => (b.input + b.output) - (a.input + a.output));
 

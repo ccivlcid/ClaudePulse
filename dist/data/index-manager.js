@@ -50,6 +50,19 @@ export function getActiveSession() {
 export function getSessionById(sessionId) {
     return readIndex().sessions.find(s => s.id === sessionId) ?? null;
 }
+export function removeSession(sessionId) {
+    const index = readIndex();
+    const before = index.sessions.length;
+    index.sessions = index.sessions.filter(s => s.id !== sessionId);
+    if (index.sessions.length < before) {
+        writeIndex(index);
+        return true;
+    }
+    return false;
+}
+export function removeAllSessions() {
+    writeIndex({ sessions: [] });
+}
 export function cleanupExpired(config) {
     const index = readIndex();
     const now = Date.now();

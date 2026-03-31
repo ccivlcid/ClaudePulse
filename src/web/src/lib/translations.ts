@@ -63,6 +63,12 @@ export const translations = {
     PATH_RESOURCE: 'PATH_RESOURCE',
     VOID_CONTEXT: 'Void_Context',
     
+    // Data Management
+    RESET_SESSION: 'Reset Session',
+    RESET_ALL: 'Reset All',
+    CONFIRM_RESET_SESSION: 'Delete this session data?',
+    CONFIRM_RESET_ALL: 'Delete ALL Pulse data?',
+
     // Footer
     KERNEL_SIGNAL: 'Kernel_Signal',
     UPTIME: 'Uptime',
@@ -130,6 +136,12 @@ export const translations = {
     PATH_RESOURCE: '파일 경로',
     VOID_CONTEXT: '데이터 없음',
     
+    // Data Management
+    RESET_SESSION: '세션 초기화',
+    RESET_ALL: '전체 초기화',
+    CONFIRM_RESET_SESSION: '이 세션 데이터를 삭제할까요?',
+    CONFIRM_RESET_ALL: '모든 Pulse 데이터를 삭제할까요?',
+
     // Footer
     KERNEL_SIGNAL: '커널 신호',
     UPTIME: '업타임',

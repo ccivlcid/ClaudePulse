@@ -36,4 +36,37 @@ export function appendServerLog(sessionId, log) {
     const filePath = getServerLogPath(sessionId);
     fs.appendFileSync(filePath, JSON.stringify(log) + '\n');
 }
+export function deleteSession(sessionId) {
+    const sessionFile = getSessionFilePath(sessionId);
+    const serverFile = getServerLogPath(sessionId);
+    try {
+        fs.unlinkSync(sessionFile);
+    }
+    catch { /* already gone */ }
+    try {
+        fs.unlinkSync(serverFile);
+    }
+    catch { /* already gone */ }
+}
+export function deleteAllData() {
+    const sessionsDir = getSessionsDir();
+    const serversDir = getServersDir();
+    const indexPath = getIndexPath();
+    try {
+        for (const file of fs.readdirSync(sessionsDir)) {
+            fs.unlinkSync(path.join(sessionsDir, file));
+        }
+    }
+    catch { /* dir may not exist */ }
+    try {
+        for (const file of fs.readdirSync(serversDir)) {
+            fs.unlinkSync(path.join(serversDir, file));
+        }
+    }
+    catch { /* dir may not exist */ }
+    try {
+        fs.writeFileSync(indexPath, JSON.stringify({ sessions: [] }, null, 2) + '\n');
+    }
+    catch { /* ignore */ }
+}
 //# sourceMappingURL=writer.js.map

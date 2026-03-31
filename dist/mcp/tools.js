@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import { exec } from 'node:child_process';
 import { getSessionStats, getFileHeatmap, getAgentStatus, getTimeline, readSessionEvents } from '../data/reader.js';
-import { getActiveSession } from '../data/index-manager.js';
-import { getServerLogPath } from '../data/writer.js';
+import { getActiveSession, removeSession, removeAllSessions } from '../data/index-manager.js';
+import { getServerLogPath, deleteSession, deleteAllData } from '../data/writer.js';
 import { startServer, stopServer, getServerStatus } from '../server-monitor/process-manager.js';
 import { detectLevel, isServerReady, extractPort } from '../server-monitor/error-detector.js';
 import { startDashboard } from '../web/server.js';
@@ -256,10 +256,23 @@ ${lines.length > 0 ? lines.join('\n') : '  (도구 사용 없음)'}
 ※ 추정치: tool_input 길이 기반 (~4 chars/token)
 ───────────────────────────────────`);
 }
+export function pulseResetSession(params) {
+    const found = removeSession(params.sessionId);
+    if (!found)
+        return error(`세션 "${params.sessionId}"을 찾을 수 없습니다.`);
+    deleteSession(params.sessionId);
+    return text(`세션 "${params.sessionId}" 데이터가 삭제되었습니다.`);
+}
+export function pulseResetAll() {
+    deleteAllData();
+    removeAllSessions();
+    return text('모든 Claude Pulse 데이터가 초기화되었습니다.');
+}
 let dashboardRunning = false;
 export function pulseOpenDashboard(params) {
     const port = params.port ?? parseInt(process.env.PULSE_DASHBOARD_PORT ?? '52101', 10);
-    const url = `http://localhost:${port}`;
+    const projectParam = params.project ? `?project=${encodeURIComponent(params.project)}` : '';
+    const url = `http://localhost:${port}${projectParam}`;
     if (!dashboardRunning) {
         try {
             startDashboard(port);

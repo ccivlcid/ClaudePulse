@@ -5,16 +5,32 @@ import { streamSSE } from 'hono/streaming';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getSessions, getActiveSession } from '../data/index-manager.js';
+import { getSessions, getActiveSession, removeSession, removeAllSessions } from '../data/index-manager.js';
 import { readSessionEvents, getSessionStats, getFileHeatmap, getAgentStatus, getTimeline } from '../data/reader.js';
-import { getSessionFilePath, getServerLogPath } from '../data/writer.js';
+import { getSessionFilePath, getServerLogPath, deleteSession, deleteAllData } from '../data/writer.js';
 const app = new Hono();
 app.use('*', cors());
 // --- API Routes ---
 app.get('/api/sessions', (c) => {
-    return c.json(getSessions());
+    const project = c.req.query('project');
+    const sessions = getSessions();
+    if (project) {
+        const normalized = project.replace(/\\/g, '/').toLowerCase();
+        return c.json(sessions.filter(s => s.project.replace(/\\/g, '/').toLowerCase() === normalized));
+    }
+    return c.json(sessions);
 });
 app.get('/api/sessions/active', (c) => {
+    const project = c.req.query('project');
+    if (project) {
+        const normalized = project.replace(/\\/g, '/').toLowerCase();
+        const sessions = getSessions()
+            .filter(s => s.project.replace(/\\/g, '/').toLowerCase() === normalized && !s.endedAt)
+            .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+        if (sessions.length === 0)
+            return c.json({ error: 'No active session for this project' }, 404);
+        return c.json(sessions[0]);
+    }
     const active = getActiveSession();
     if (!active)
         return c.json({ error: 'No active session' }, 404);
@@ -61,6 +77,20 @@ app.get('/api/sessions/:id/server-logs', (c) => {
     catch {
         return c.json([]);
     }
+});
+// --- Data management endpoints ---
+app.delete('/api/sessions/:id', (c) => {
+    const sid = c.req.param('id');
+    const found = removeSession(sid);
+    if (!found)
+        return c.json({ error: 'Session not found' }, 404);
+    deleteSession(sid);
+    return c.json({ ok: true, message: `Session ${sid} deleted` });
+});
+app.delete('/api/sessions', (c) => {
+    deleteAllData();
+    removeAllSessions();
+    return c.json({ ok: true, message: 'All data reset' });
 });
 // --- SSE endpoint ---
 app.get('/api/sse', (c) => {

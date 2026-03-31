@@ -9,4 +9,6 @@ export declare function getConfigPath(): string;
 export declare function ensureDirectories(): void;
 export declare function appendEvent(sessionId: string, event: PulseEvent): void;
 export declare function appendServerLog(sessionId: string, log: Record<string, unknown> | object): void;
+export declare function deleteSession(sessionId: string): void;
+export declare function deleteAllData(): void;
 //# sourceMappingURL=writer.d.ts.map

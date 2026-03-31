@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePulseSSE, useSessions } from './hooks/usePulseData.js';
 import { useServerLogs } from './hooks/useServerLogs.js';
 import { usePulseStore } from './stores/pulseStore.js';
@@ -30,6 +30,8 @@ export default function App() {
   const { logs } = useServerLogs(activeSessionId, 150);
 
   const [standaloneView, setStandaloneView] = useState<string | null>(null);
+  const [sessionDropdownOpen, setSessionDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const t = translations[language];
 
   useEffect(() => {
@@ -38,9 +40,36 @@ export default function App() {
     if (view) setStandaloneView(view);
   }, []);
 
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setSessionDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const { setActiveSessionId: switchSession } = usePulseStore();
+
   const openPopout = (view: string) => {
     const url = `${window.location.origin}${window.location.pathname}?view=${view}`;
     window.open(url, '_blank', 'width=1400,height=850,menubar=no,status=no');
+  };
+
+  const API_BASE = window.location.origin;
+
+  const resetSession = async () => {
+    if (!activeSessionId) return;
+    if (!confirm(t.CONFIRM_RESET_SESSION)) return;
+    await fetch(`${API_BASE}/api/sessions/${activeSessionId}`, { method: 'DELETE' });
+    window.location.reload();
+  };
+
+  const resetAll = async () => {
+    if (!confirm(t.CONFIRM_RESET_ALL)) return;
+    await fetch(`${API_BASE}/api/sessions`, { method: 'DELETE' });
+    window.location.reload();
   };
 
   const files = buildFileStats(events);
@@ -87,9 +116,49 @@ export default function App() {
               <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-wider">{t.ENVIRONMENT}</span>
               <span className="text-[13px] font-semibold text-[var(--fg)] mono uppercase truncate max-w-[200px]">{currentProject || t.INITIALIZING}</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-wider">{t.SESSION_ID}</span>
-              <span className="text-[13px] font-medium text-[var(--text-muted)] mono">{activeSessionId?.slice(0,8).toUpperCase() || '--------'}</span>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setSessionDropdownOpen(!sessionDropdownOpen)}
+                className="flex flex-col items-start hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none p-0"
+              >
+                <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-wider">{t.SESSION_ID}</span>
+                <span className="text-[13px] font-medium text-[var(--text-muted)] mono flex items-center gap-2">
+                  {activeSessionId?.slice(0, 8).toUpperCase() || '--------'}
+                  <span className="text-[10px]">{sessionDropdownOpen ? '▲' : '▼'}</span>
+                </span>
+              </button>
+              {sessionDropdownOpen && sessions.length > 0 && (
+                <div className="absolute top-full left-0 mt-2 w-[320px] bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg z-50 max-h-[300px] overflow-y-auto">
+                  {sessions
+                    .slice()
+                    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+                    .map((s) => {
+                      const isActive = s.id === activeSessionId;
+                      const project = s.project.replace(/\\/g, '/').split('/').pop() || s.project;
+                      const time = new Date(s.startedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                      const date = new Date(s.startedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => { switchSession(s.id); setSessionDropdownOpen(false); }}
+                          className={`w-full text-left px-4 py-3 flex justify-between items-center hover:bg-[var(--surface-raised)] transition-colors border-b border-[var(--border)] last:border-0 ${isActive ? 'bg-[var(--surface-raised)]' : ''}`}
+                        >
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-[12px] font-bold text-[var(--fg)] truncate">{project}</span>
+                            <span className="text-[11px] text-[var(--text-faint)] mono">{s.id.slice(0, 8).toUpperCase()}</span>
+                          </div>
+                          <div className="flex flex-col items-end gap-0.5 shrink-0">
+                            <span className="text-[11px] text-[var(--text-muted)] mono">{date} {time}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-[var(--text-faint)]">T:{s.toolCount}</span>
+                              {!s.endedAt && <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-green)]"></span>}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -118,6 +187,8 @@ export default function App() {
               </span>
             </div>
             <div className="flex gap-3">
+              <button onClick={resetSession} className="cli-btn !px-4 !py-1.5" title={t.RESET_SESSION}>{t.RESET_SESSION}</button>
+              <button onClick={resetAll} className="cli-btn !px-4 !py-1.5 !text-[var(--neon-red)] !border-[var(--neon-red)]/30" title={t.RESET_ALL}>{t.RESET_ALL}</button>
               <button onClick={toggleLanguage} className="cli-btn !px-4 !py-1.5">{language === 'ko' ? 'EN' : 'KO'}</button>
               <button onClick={toggleTheme} className="cli-btn !px-4 !py-1.5">{theme.toUpperCase()}</button>
             </div>

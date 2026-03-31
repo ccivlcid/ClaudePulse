@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePulseStore } from '../stores/pulseStore.js';
-import { buildActivityGroups, formatClock } from '../lib/dashboard.js';
+import { buildActivityGroups, formatClock, formatClockShort } from '../lib/dashboard.js';
 import { translations } from '../lib/translations.js';
 
 const FILTERS = ['all', 'errors', 'tools', 'agents'] as const;
@@ -68,7 +68,7 @@ export default function ActivityStream({ onPopout }: ActivityStreamProps) {
                     return (
                       <div key={item.id} className="flex gap-8 group hover:bg-[var(--surface)] px-3 py-2 rounded-md transition-colors">
                         <span className="text-[var(--text-muted)] shrink-0 w-16 font-medium text-[12px] mono">
-                          {formatClock(item.ts).split(':').slice(1).join(':')}
+                          {formatClockShort(item.ts)}
                         </span>
                         <span className={`shrink-0 w-24 text-[12px] font-bold tracking-wide ${isError ? 'text-[var(--neon-red)]' : 'text-[var(--neon-cyan)]'}`}>
                           [{item.kind.toUpperCase()}]

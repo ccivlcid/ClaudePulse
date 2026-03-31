@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { pulseSessionStats, pulseFileHeatmap, pulseAgentStatus, pulseTokenUsage, pulseTimeline, pulseServerLogs, pulseServerErrors, pulseServerHealth, pulseStartServer, pulseStopServer, pulseOpenDashboard, } from './tools.js';
+import { pulseSessionStats, pulseFileHeatmap, pulseAgentStatus, pulseTokenUsage, pulseTimeline, pulseServerLogs, pulseServerErrors, pulseServerHealth, pulseStartServer, pulseStopServer, pulseOpenDashboard, pulseResetSession, pulseResetAll, } from './tools.js';
 const server = new McpServer({
     name: 'claude-pulse',
     version: '0.1.0',
@@ -31,7 +31,13 @@ server.tool('pulse_start_server', 'Dev 서버 시작 + 로그 자동 캡처', {
 }, async (params) => pulseStartServer(params));
 server.tool('pulse_stop_server', 'Dev 서버 종료', {}, async () => pulseStopServer());
 // --- Dashboard tool ---
-server.tool('pulse_open_dashboard', '웹 대시보드 시작 + 브라우저 열기', { port: z.number().optional().describe('대시보드 포트 (기본값: 52101)') }, async (params) => pulseOpenDashboard(params));
+server.tool('pulse_open_dashboard', '웹 대시보드 시작 + 브라우저 열기', {
+    port: z.number().optional().describe('대시보드 포트 (기본값: 52101)'),
+    project: z.string().optional().describe('프로젝트 경로 (해당 프로젝트 세션만 표시)'),
+}, async (params) => pulseOpenDashboard(params));
+// --- Data management tools ---
+server.tool('pulse_reset_session', '특정 세션 데이터 삭제', { sessionId: z.string().describe('삭제할 세션 ID') }, async (params) => pulseResetSession(params));
+server.tool('pulse_reset_all', '모든 Pulse 데이터 초기화 (세션, 서버 로그 전체 삭제)', {}, async () => pulseResetAll());
 // --- Start server ---
 async function main() {
     const transport = new StdioServerTransport();

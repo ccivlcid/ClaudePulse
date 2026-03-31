@@ -37,8 +37,13 @@ export declare function pulseStopServer(): ToolResult;
 export declare function pulseTokenUsage(params: {
     sessionId?: string;
 }): ToolResult;
+export declare function pulseResetSession(params: {
+    sessionId: string;
+}): ToolResult;
+export declare function pulseResetAll(): ToolResult;
 export declare function pulseOpenDashboard(params: {
     port?: number;
+    project?: string;
 }): ToolResult;
 export {};
 //# sourceMappingURL=tools.d.ts.map

@@ -3,6 +3,11 @@ import { usePulseStore, type PulseEvent } from '../stores/pulseStore.js';
 
 const API_BASE = window.location.origin;
 
+function getProjectFilter(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('project');
+}
+
 export function usePulseSSE() {
   const { setEvents, addEvent, setConnected, activeSessionId } = usePulseStore();
   const esRef = useRef<EventSource | null>(null);
@@ -63,14 +68,17 @@ export function useSessions() {
   const { setSessions, setActiveSessionId } = usePulseStore();
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/sessions`)
+    const project = getProjectFilter();
+    const projectParam = project ? `?project=${encodeURIComponent(project)}` : '';
+
+    fetch(`${API_BASE}/api/sessions${projectParam}`)
       .then(r => r.json())
       .then(sessions => {
         setSessions(sessions);
       })
       .catch(() => {});
 
-    fetch(`${API_BASE}/api/sessions/active`)
+    fetch(`${API_BASE}/api/sessions/active${projectParam}`)
       .then(r => r.json())
       .then(active => {
         if (active?.id) setActiveSessionId(active.id);

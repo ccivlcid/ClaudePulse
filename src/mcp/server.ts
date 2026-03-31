@@ -13,6 +13,8 @@ import {
   pulseStartServer,
   pulseStopServer,
   pulseOpenDashboard,
+  pulseResetSession,
+  pulseResetAll,
 } from './tools.js';
 
 const server = new McpServer({
@@ -111,8 +113,27 @@ server.tool(
 server.tool(
   'pulse_open_dashboard',
   '웹 대시보드 시작 + 브라우저 열기',
-  { port: z.number().optional().describe('대시보드 포트 (기본값: 52101)') },
+  {
+    port: z.number().optional().describe('대시보드 포트 (기본값: 52101)'),
+    project: z.string().optional().describe('프로젝트 경로 (해당 프로젝트 세션만 표시)'),
+  },
   async (params) => pulseOpenDashboard(params),
+);
+
+// --- Data management tools ---
+
+server.tool(
+  'pulse_reset_session',
+  '특정 세션 데이터 삭제',
+  { sessionId: z.string().describe('삭제할 세션 ID') },
+  async (params) => pulseResetSession(params),
+);
+
+server.tool(
+  'pulse_reset_all',
+  '모든 Pulse 데이터 초기화 (세션, 서버 로그 전체 삭제)',
+  {},
+  async () => pulseResetAll(),
 );
 
 // --- Start server ---
