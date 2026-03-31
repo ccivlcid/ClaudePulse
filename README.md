@@ -17,6 +17,8 @@ Claude Code CLI
   ├── CLI에서 바로 조회     "/claude-pulse:stats"
   │
   └── 웹 대시보드에서 시각화  "/claude-pulse:dashboard"  →  http://localhost:52101
+  │  
+  └── CLI에서 로컬 서버 시작/중지  "/claude-pulse:server 서버명렁어"  →  http://localhost:서버포트
 ```
 
 ---
@@ -30,7 +32,7 @@ claude plugin marketplace add ccivlcid/ClaudePulse
 # 2. 플러그인 설치
 claude plugin install claude-pulse@claude-pulse
 
-# 2. 플러그인 할성화
+# 3. 플러그인 할성화
 claude plugin enable claude-pulse
 ```
 
@@ -129,22 +131,39 @@ claude plugin enable claude-pulse
 
 ### 3. Dev 서버 모니터링
 
-Claude Pulse를 통해 Dev 서버를 시작하면 로그가 자동 캡처됩니다.
+슬래시 커맨드 또는 자연어로 Dev 서버를 시작/중지할 수 있습니다.
+
+```
+> /claude-pulse:server start npm run dev
+→ "Dev 서버 시작됨 (PID: 12345, localhost:3000)"
+
+> /claude-pulse:server stop
+→ "Dev 서버 종료됨"
+```
+
+자연어로도 가능합니다:
 
 ```
 > dev 서버 띄워줘
-
 Claude Code → pulse_start_server({ command: "npm run dev" })
 → "Next.js 서버 시작됨 (localhost:3000)"
+
+> dev 서버 내려줘
+Claude Code → pulse_stop_server()
+→ "서버 종료됨"
 ```
 
-이후 서버 에러 확인:
+서버가 실행 중이면 로그가 자동으로 캡처되어 대시보드 Server Monitor 패널에 실시간 표시됩니다.
+
+에러 확인:
 
 ```
 > 서버 에러 있어?
-
 → "1건 발견 - TypeError at src/api/auth.ts:42 (14:35:05)"
 → Claude Code가 자동으로 해당 파일 확인 → 수정 제안
+
+> /claude-pulse:errors
+→ 세션 내 모든 에러 (도구 실패 + 서버 에러) 요약
 ```
 
 **자동 감지하는 에러 패턴:**
