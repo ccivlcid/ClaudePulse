@@ -7,7 +7,7 @@
 <p align="center">A dashboard plugin that visualizes all Claude Code CLI activity in real time</p>
 
 <p align="center">
-  <img src="docs/1.jpg" alt="Claude Pulse Dashboard" width="100%" />
+  <img src="assets/screenshot.jpg" alt="Claude Pulse Dashboard" width="100%" />
 </p>
 
 ---

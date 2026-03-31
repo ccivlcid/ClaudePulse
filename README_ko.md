@@ -7,7 +7,7 @@
 <p align="center">Claude Code CLI의 모든 활동을 실시간으로 시각화하는 대시보드 플러그인</p>
 
 <p align="center">
-  <img src="docs/1.jpg" alt="Claude Pulse Dashboard" width="100%" />
+  <img src="assets/screenshot.jpg" alt="Claude Pulse Dashboard" width="100%" />
 </p>
 
 ---
