@@ -7,7 +7,7 @@ export default defineConfig({
   root: __dirname,
   build: {
     outDir: '../../dist/web',
-    emptyOutDir: false,
+    emptyOutDir: true,
   },
   server: {
     port: 5173,
