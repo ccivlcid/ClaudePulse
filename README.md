@@ -1,6 +1,14 @@
-# Claude Pulse
+<p align="center">
+  <img src="src/web/public/logo.svg" alt="Claude Pulse" width="96" />
+</p>
 
-> A dashboard plugin that visualizes all Claude Code CLI activity in real time
+<h1 align="center">Claude Pulse</h1>
+
+<p align="center">A dashboard plugin that visualizes all Claude Code CLI activity in real time</p>
+
+<p align="center">
+  <img src="docs/1.jpg" alt="Claude Pulse Dashboard" width="100%" />
+</p>
 
 ---
 

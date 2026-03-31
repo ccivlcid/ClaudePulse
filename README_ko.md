@@ -1,6 +1,14 @@
-# Claude Pulse
+<p align="center">
+  <img src="src/web/public/logo.svg" alt="Claude Pulse" width="96" />
+</p>
 
-> Claude Code CLI의 모든 활동을 실시간으로 시각화하는 대시보드 플러그인
+<h1 align="center">Claude Pulse</h1>
+
+<p align="center">Claude Code CLI의 모든 활동을 실시간으로 시각화하는 대시보드 플러그인</p>
+
+<p align="center">
+  <img src="docs/1.jpg" alt="Claude Pulse Dashboard" width="100%" />
+</p>
 
 ---
 
