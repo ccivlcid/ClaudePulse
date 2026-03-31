@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { usePulseStore, type PulseEvent } from '../stores/pulseStore.js';
+import { useEffect, useRef } from 'react';
+import { usePulseStore, type PulseEvent, type SessionEntry } from '../stores/pulseStore.js';
 
 const API_BASE = window.location.origin;
 
@@ -24,11 +24,10 @@ export function usePulseSSE() {
 
     sessionRef.current = activeSessionId;
 
-    // Step 1: Fetch all events via REST (reliable, complete)
+    // Step 1: Fetch all events via REST
     fetch(`${API_BASE}/api/sessions/${activeSessionId}/events`)
       .then(r => r.json())
       .then((events: PulseEvent[]) => {
-        // Guard against stale response
         if (sessionRef.current !== activeSessionId) return;
         setEvents(events);
       })
@@ -36,18 +35,17 @@ export function usePulseSSE() {
         if (sessionRef.current === activeSessionId) setEvents([]);
       });
 
-    // Step 2: Connect SSE for live updates only
+    // Step 2: SSE for live updates only
     const es = new EventSource(`${API_BASE}/api/sse?sessionId=${activeSessionId}`);
     esRef.current = es;
     let sseReady = false;
 
     es.addEventListener('heartbeat', () => {
-      // First heartbeat means initial batch is done — switch to live mode
       sseReady = true;
     });
 
     es.addEventListener('pulse-event', (e) => {
-      if (!sseReady) return; // Skip initial batch (we already loaded via REST)
+      if (!sseReady) return;
       if (sessionRef.current !== activeSessionId) return;
       try {
         const event = JSON.parse(e.data) as PulseEvent;
@@ -72,24 +70,29 @@ export function usePulseSSE() {
 export function useSessions() {
   const setSessions = usePulseStore((s) => s.setSessions);
   const setActiveSessionId = usePulseStore((s) => s.setActiveSessionId);
-  const activeSessionId = usePulseStore((s) => s.activeSessionId);
-
-  const fetchSessions = useCallback(() => {
-    const project = getProjectFilter();
-    const projectParam = project ? `?project=${encodeURIComponent(project)}` : '';
-
-    fetch(`${API_BASE}/api/sessions${projectParam}`)
-      .then(r => r.json())
-      .then(sessions => setSessions(sessions))
-      .catch(() => {});
-  }, [setSessions]);
+  const lastSessionsRef = useRef<string>('');
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     const project = getProjectFilter();
     const projectParam = project ? `?project=${encodeURIComponent(project)}` : '';
 
-    // Only set active session on first load (don't override user's selection)
-    if (!activeSessionId) {
+    const fetchSessions = () => {
+      fetch(`${API_BASE}/api/sessions${projectParam}`)
+        .then(r => r.json())
+        .then((sessions: SessionEntry[]) => {
+          // Only update state if data actually changed (prevent unnecessary re-renders)
+          const key = JSON.stringify(sessions.map(s => s.id + s.toolCount + s.agentCount + s.errorCount + (s.endedAt ?? '')));
+          if (key === lastSessionsRef.current) return;
+          lastSessionsRef.current = key;
+          setSessions(sessions);
+        })
+        .catch(() => {});
+    };
+
+    // Set active session only on first load
+    if (!initializedRef.current) {
+      initializedRef.current = true;
       fetch(`${API_BASE}/api/sessions/active${projectParam}`)
         .then(r => r.json())
         .then(active => {
@@ -101,5 +104,5 @@ export function useSessions() {
     fetchSessions();
     const interval = setInterval(fetchSessions, 5000);
     return () => clearInterval(interval);
-  }, [fetchSessions, setActiveSessionId, activeSessionId]);
+  }, [setSessions, setActiveSessionId]);
 }
