@@ -45,10 +45,14 @@ export const translations = {
     NO_DATA: 'No_Buffer_Data',
     BASED_ON_SONNET: 'Based on Sonnet 3.5 Avg',
     
-    // Alert Center
-    ALERT_CENTER: 'anomaly_scan.err',
+    // Fault Trace (was Alert Center)
+    ALERT_CENTER: 'agent_fault.err',
     CRITICAL: 'CRITICAL',
     ZERO_ANOMALIES: 'Zero_Anomalies',
+
+    // Session Sidebar
+    SESSIONS: 'Sessions',
+    NO_SESSIONS: 'No sessions',
     
     // Agent Tracker
     AGENT_TRACKER: 'process_hive.top',
@@ -118,10 +122,14 @@ export const translations = {
     NO_DATA: '데이터 없음',
     BASED_ON_SONNET: 'Sonnet 3.5 평균 기준',
     
-    // Alert Center
-    ALERT_CENTER: '알림 센터',
+    // Fault Trace (was Alert Center)
+    ALERT_CENTER: '에이전트 오류 추적',
     CRITICAL: '치명적',
     ZERO_ANOMALIES: '감지된 에러 없음',
+
+    // Session Sidebar
+    SESSIONS: '세션',
+    NO_SESSIONS: '세션 없음',
     
     // Agent Tracker
     AGENT_TRACKER: '에이전트 추적',

@@ -454,9 +454,11 @@ export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
     }
   }
 
-  // Add estimated overhead for conversation context and system prompt
-  const overhead = SESSION_BASELINE + (totalCalls * OVERHEAD_PER_CALL);
-  inputTokens += overhead;
+  // Add estimated overhead only when there are actual tool calls
+  if (totalCalls > 0) {
+    const overhead = SESSION_BASELINE + (totalCalls * OVERHEAD_PER_CALL);
+    inputTokens += overhead;
+  }
 
   toolBreakdown.sort((a, b) => (b.input + b.output) - (a.input + a.output));
 
