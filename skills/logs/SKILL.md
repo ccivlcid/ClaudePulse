@@ -1,6 +1,7 @@
 ---
 name: logs
 description: View dev server logs from Claude Pulse
+user-invocable: true
 ---
 
 <Use_When>

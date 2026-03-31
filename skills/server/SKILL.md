@@ -1,6 +1,7 @@
 ---
 name: server
 description: Start or stop a dev server with log monitoring via Claude Pulse
+user-invocable: true
 ---
 
 <Use_When>

@@ -213,8 +213,9 @@ export function startDashboard(port: number = 52101): { port: number } {
   return { port };
 }
 
-// Direct execution
-const isDirectRun = process.argv[1]?.endsWith('server.js') || process.argv[1]?.endsWith('server.ts');
+// Direct execution (only when running web/server.js directly, not via mcp/server.js)
+const scriptPath = process.argv[1]?.replace(/\\/g, '/') ?? '';
+const isDirectRun = scriptPath.endsWith('web/server.js') || scriptPath.endsWith('web/server.ts');
 if (isDirectRun) {
   const port = parseInt(process.env.PULSE_DASHBOARD_PORT ?? '52101', 10);
   startDashboard(port);

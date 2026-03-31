@@ -1,6 +1,7 @@
 ---
 name: errors
 description: Show all errors from current session (tool failures + server errors)
+user-invocable: true
 ---
 
 <Use_When>

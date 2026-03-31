@@ -1,6 +1,7 @@
 ---
 name: dashboard
 description: Open the Claude Pulse real-time activity dashboard in browser
+user-invocable: true
 ---
 
 <Use_When>

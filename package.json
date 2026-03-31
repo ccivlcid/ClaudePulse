@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && npm run build:web",
+    "build": "npm run build:web && tsc",
     "build:web": "cd src/web && npx vite build --outDir ../../dist/web",
     "dev:web": "cd src/web && npx vite --port 5173",
     "test": "vitest",

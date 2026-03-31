@@ -1,6 +1,7 @@
 ---
 name: stats
 description: Show current session statistics from Claude Pulse
+user-invocable: true
 ---
 
 <Use_When>
