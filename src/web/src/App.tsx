@@ -179,8 +179,9 @@ export default function App() {
         <header className="flex-shrink-0 flex justify-between items-center bg-[var(--surface-raised)] border border-[var(--border)] px-8 py-3 rounded-t-md">
           <div className="flex items-center gap-10">
             <div className="flex items-center gap-4">
-              <div className={`w-3 h-3 rounded-full ${connected ? 'bg-[var(--neon-green)]' : 'bg-[var(--neon-red)]'}`}></div>
+              <img src="/logo.svg" alt="Claude Pulse" className="w-7 h-7" />
               <span className="text-[16px] font-bold tracking-tight text-[var(--fg)] uppercase">Claude_Pulse</span>
+              <div className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]' : 'bg-[var(--neon-red)] shadow-[0_0_6px_var(--neon-red)]'}`}></div>
             </div>
             <div className="hidden lg:flex items-center gap-10">
               <div className="flex flex-col">

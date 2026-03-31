@@ -219,7 +219,30 @@ export function buildFileStats(events: PulseEvent[]): FileStat[] {
 export function buildAgentSummaries(events: PulseEvent[]): AgentSummary[] {
   const agents = new Map<string, AgentSummary>();
 
+  // Build main session agent from all non-subagent tool events
+  let mainStartedAt = '';
+  let mainLastTask = '';
+  const mainToolCounts: Record<string, number> = {};
+  let mainHasSessionEnd = false;
+
   for (const event of events) {
+    // Main session: tool events without agentId
+    if (event.type === 'tool-start' && !event.agentId) {
+      const key = event.toolName ?? 'Tool';
+      mainToolCounts[key] = (mainToolCounts[key] ?? 0) + 1;
+      if (event.filePath) mainLastTask = `${key} ${shortPath(event.filePath)}`;
+      else mainLastTask = `${key} ${extractCommand(event.toolInput)}`;
+    }
+
+    if (event.type === 'session-start') {
+      mainStartedAt = event.ts;
+    }
+
+    if (event.type === 'session-end') {
+      mainHasSessionEnd = true;
+    }
+
+    // Subagent events
     if (event.type === 'agent-start' && event.agentId) {
       agents.set(event.agentId, {
         agentId: event.agentId,
@@ -249,10 +272,34 @@ export function buildAgentSummaries(events: PulseEvent[]): AgentSummary[] {
     }
   }
 
-  return [...agents.values()].sort((left, right) => {
+  // Insert main session as the first entry
+  const mainTotalCalls = Object.values(mainToolCounts).reduce((s, n) => s + n, 0);
+  if (mainStartedAt || mainTotalCalls > 0) {
+    const mainAgent: AgentSummary = {
+      agentId: '__main__',
+      agentType: 'Main Agent',
+      status: mainHasSessionEnd ? 'done' : 'running',
+      startedAt: mainStartedAt || events[0]?.ts || new Date().toISOString(),
+      currentTask: mainLastTask || 'Waiting',
+      toolCounts: mainToolCounts,
+    };
+    if (mainHasSessionEnd) {
+      const endEvent = [...events].reverse().find(e => e.type === 'session-end');
+      if (endEvent) mainAgent.endedAt = endEvent.ts;
+    }
+    agents.set('__main__', mainAgent);
+  }
+
+  const subagents = [...agents.values()].filter(a => a.agentId !== '__main__');
+  const main = agents.get('__main__');
+
+  // Main agent first, then subagents sorted by status/time
+  subagents.sort((left, right) => {
     if (left.status !== right.status) return left.status === 'running' ? -1 : 1;
     return new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime();
   });
+
+  return main ? [main, ...subagents] : subagents;
 }
 
 export function buildTimelineMilestones(events: PulseEvent[]): TimelineMilestone[] {
@@ -384,34 +431,19 @@ export interface TokenUsageSummary {
   toolBreakdown: { tool: string; input: number; output: number; calls: number }[];
 }
 
-// Average output tokens per tool (when tool-end has no response data)
+// tool-end에 response 데이터가 없을 때 사용하는 평균 output 토큰
+// mcp/tools.ts와 동일한 값을 사용해야 함
 const AVG_OUTPUT_TOKENS: Record<string, number> = {
-  Read: 1200,
-  Edit: 300,
-  Write: 200,
-  Bash: 800,
-  Grep: 600,
-  Glob: 300,
-  Agent: 2000,
-  Search: 800,
+  Read: 500, Edit: 150, Write: 100, Bash: 400, Grep: 300, Glob: 150, Agent: 800, Search: 400,
 };
 
-// Per-call overhead: system prompt fragment + conversation context that Claude
-// processes each time it decides to call a tool. This accounts for the tokens
-// we cannot observe through hooks (system prompt, chat history, reasoning).
-const OVERHEAD_PER_CALL = 800;
-
-// Baseline tokens for session infrastructure (system prompt, CLAUDE.md, etc.)
-const SESSION_BASELINE = 4000;
-
 function estimateTokens(text: string): number {
-  // Mixed content (code + natural language) averages ~3.2 chars/token
-  return Math.ceil(text.length / 3.2);
+  // ~4 chars/token (mixed code + natural language)
+  return Math.ceil(text.length / 4);
 }
 
 export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
   const toolMap = new Map<string, { input: number; output: number; calls: number }>();
-  let totalCalls = 0;
 
   for (const event of events) {
     if (event.type !== 'tool-start' && event.type !== 'tool-end') continue;
@@ -424,7 +456,6 @@ export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
 
     if (event.type === 'tool-start') {
       entry.calls += 1;
-      totalCalls += 1;
       if (event.toolInput) {
         entry.input += estimateTokens(JSON.stringify(event.toolInput));
       }
@@ -437,7 +468,7 @@ export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
       } else if (resp?.stderr) {
         entry.output += estimateTokens(resp.stderr);
       } else {
-        entry.output += AVG_OUTPUT_TOKENS[tool] ?? 400;
+        entry.output += AVG_OUTPUT_TOKENS[tool] ?? 200;
       }
     }
   }
@@ -454,12 +485,6 @@ export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
     }
   }
 
-  // Add estimated overhead only when there are actual tool calls
-  if (totalCalls > 0) {
-    const overhead = SESSION_BASELINE + (totalCalls * OVERHEAD_PER_CALL);
-    inputTokens += overhead;
-  }
-
   toolBreakdown.sort((a, b) => (b.input + b.output) - (a.input + a.output));
 
   return { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens, toolBreakdown };
@@ -469,9 +494,8 @@ export function buildActivityGroups(
   events: PulseEvent[],
   filter: 'all' | 'errors' | 'tools' | 'agents' | 'session',
 ): ActivityGroup[] {
-  const relevant = events
+  const mapped = events
     .filter((event) => event.type !== 'tool-end')
-    .slice(-32)
     .reverse()
     .map<ActivityItem>((event) => {
       if (event.type === 'session-start') {
@@ -535,6 +559,7 @@ export function buildActivityGroups(
       }
 
       const subject = event.filePath ? shortPath(event.filePath) : extractCommand(event.toolInput);
+      const isAgentRelated = event.toolName === 'Agent' || !!event.agentId;
       const tone = event.toolName === 'Edit' || event.toolName === 'Write'
         ? 'accent'
         : event.toolName === 'Bash'
@@ -544,14 +569,16 @@ export function buildActivityGroups(
       return {
         id: event.id,
         ts: event.ts,
-        owner: event.agentType ?? 'Workspace',
-        kind: 'tools',
-        tone,
+        owner: event.agentType ?? (event.agentId ? 'Subagent' : 'Workspace'),
+        kind: isAgentRelated ? 'agents' : 'tools',
+        tone: event.toolName === 'Agent' ? 'accent' : tone,
         title: `${event.toolName ?? 'Tool'} ${subject}`,
         detail: event.filePath ? 'Tool activity recorded' : subject,
       };
     })
-    .filter((item) => filter === 'all' || item.kind === filter);
+  const relevant = mapped
+    .filter((item) => filter === 'all' || item.kind === filter)
+    .slice(0, 32);
 
   const groups: ActivityGroup[] = [];
 

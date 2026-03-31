@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+
+  <!-- Pulse line -->
+  <polyline
+    points="16,68 36,68 44,68 50,48 56,84 62,38 68,78 74,58 80,68 88,68 112,68"
+    stroke="#00e5ff"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+
+  <!-- Glow effect for pulse -->
+  <polyline
+    points="16,68 36,68 44,68 50,48 56,84 62,38 68,78 74,58 80,68 88,68 112,68"
+    stroke="#00e5ff"
+    stroke-width="8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+    opacity="0.25"
+  />
+
+  <!-- Dot at current position -->
+  <circle cx="112" cy="68" r="4" fill="#00e5ff">
+    <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="112" cy="68" r="8" fill="#00e5ff" opacity="0.2">
+    <animate attributeName="r" values="8;14;8" dur="1.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.2;0;0.2" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>

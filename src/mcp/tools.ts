@@ -230,11 +230,14 @@ export function pulseStopServer(): ToolResult {
   return text(result.message);
 }
 
+// tool-end에 response 데이터가 없을 때 사용하는 평균 output 토큰
+// dashboard.ts와 동일한 값을 사용해야 함
 const AVG_OUTPUT_TOKENS: Record<string, number> = {
-  Read: 800, Edit: 200, Write: 150, Bash: 600, Grep: 400, Glob: 200, Agent: 1200, Search: 500,
+  Read: 500, Edit: 150, Write: 100, Bash: 400, Grep: 300, Glob: 150, Agent: 800, Search: 400,
 };
 
 function estimateTokens(text: string): number {
+  // ~4 chars/token (mixed code + natural language)
   return Math.ceil(text.length / 4);
 }
 
@@ -261,7 +264,7 @@ export function pulseTokenUsage(params: { sessionId?: string }): ToolResult {
       const resp = event.toolResponse;
       if (resp?.stdout) entry.output += estimateTokens(resp.stdout);
       else if (resp?.stderr) entry.output += estimateTokens(resp.stderr);
-      else entry.output += AVG_OUTPUT_TOKENS[tool] ?? 300;
+      else entry.output += AVG_OUTPUT_TOKENS[tool] ?? 200;
     }
   }
 
