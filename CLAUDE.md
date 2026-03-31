@@ -2,7 +2,6 @@
 
 ## Project Overview
 Claude Pulse는 Claude Code CLI의 모든 활동을 실시간으로 시각화하는 **Claude Code 플러그인**입니다.
-PRD: `../CLAUDE-PULSE-PRD.md` 를 반드시 먼저 읽고 작업하세요.
 
 ## Architecture (서버리스 파일 기반)
 
