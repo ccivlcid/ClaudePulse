@@ -24,8 +24,11 @@ Claude Code CLI
 ## 설치
 
 ```bash
-# Claude Code 플러그인으로 설치
-claude plugin install claude-pulse
+# 1. 마켓플레이스 등록 (최초 1회)
+claude plugin marketplace add ccivlcid/ClaudePulse
+
+# 2. 플러그인 설치
+claude plugin install claude-pulse@claude-pulse
 ```
 
 설치 즉시 데이터 수집이 시작됩니다. 별도 설정이 필요 없습니다.
@@ -34,6 +37,31 @@ claude plugin install claude-pulse
 
 - Node.js >= 20
 - Claude Code CLI
+
+### 플러그인 관리
+
+```bash
+# 삭제
+claude plugin uninstall claude-pulse
+
+# 삭제 (데이터 보존 — ~/.claude-pulse/ 유지)
+claude plugin uninstall claude-pulse --keep-data
+
+# 업데이트
+claude plugin update claude-pulse
+
+# 일시 비활성화 / 재활성화
+claude plugin disable claude-pulse
+claude plugin enable claude-pulse
+```
+
+스코프를 지정하면 적용 범위를 제어할 수 있습니다:
+
+| 스코프 | 플래그 | 적용 범위 |
+|---|---|---|
+| user | `--scope user` (기본) | 모든 프로젝트에 적용 |
+| project | `--scope project` | 해당 프로젝트만 (`.claude/settings.json`) |
+| local | `--scope local` | 로컬만 (`.claude/settings.local.json`, Git 미추적) |
 
 ---
 
@@ -84,6 +112,8 @@ claude plugin install claude-pulse
 | **Top Files** | 가장 많이 접근한 파일 순위 시각화 |
 | **Token Usage** | 세션별 추정 토큰 사용량 (도구 호출 기반) |
 | **Server Monitor** | Dev 서버 로그 실시간 표시 |
+
+각 패널 헤더의 **↗** 버튼을 클릭하면 새 창에서 해당 패널을 전체 화면으로 볼 수 있습니다.
 
 대시보드는 SSE(Server-Sent Events)로 실시간 갱신됩니다. 새로고침 없이 Claude Code 작업이 바로 반영됩니다.
 
