@@ -17,5 +17,5 @@ description: Open the Claude Pulse real-time activity dashboard in browser
 <Instructions>
 1. Call `pulse_open_dashboard` MCP tool to start the dashboard server and open browser
 2. Inform the user that the dashboard is available at http://localhost:52101
-3. The dashboard shows: Activity Stream, File Heatmap, Agent Tracker, Cost Estimate, Session Timeline, Error Panel
+3. The dashboard shows: KPI Row, Activity Stream, Token Usage, Top Files, Agent Tracker, Alert Center, Server Monitor
 </Instructions>

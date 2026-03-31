@@ -28,6 +28,7 @@ export interface SessionEntry {
 }
 
 type Theme = 'dark' | 'light';
+type Language = 'en' | 'ko';
 
 interface PulseState {
   events: PulseEvent[];
@@ -35,17 +36,23 @@ interface PulseState {
   activeSessionId: string | null;
   connected: boolean;
   theme: Theme;
+  language: Language;
   addEvent: (event: PulseEvent) => void;
   setEvents: (events: PulseEvent[]) => void;
   setSessions: (sessions: SessionEntry[]) => void;
   setActiveSessionId: (id: string | null) => void;
   setConnected: (connected: boolean) => void;
   toggleTheme: () => void;
+  toggleLanguage: () => void;
 }
 
 const savedTheme = (typeof localStorage !== 'undefined'
   ? localStorage.getItem('pulse-theme') as Theme | null
   : null) ?? 'dark';
+
+const savedLanguage = (typeof localStorage !== 'undefined'
+  ? localStorage.getItem('pulse-lang') as Language | null
+  : null) ?? 'en';
 
 export const usePulseStore = create<PulseState>((set) => ({
   events: [],
@@ -53,6 +60,7 @@ export const usePulseStore = create<PulseState>((set) => ({
   activeSessionId: null,
   connected: false,
   theme: savedTheme,
+  language: savedLanguage,
   addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
   setEvents: (events) => set({ events }),
   setSessions: (sessions) => set({ sessions }),
@@ -63,5 +71,10 @@ export const usePulseStore = create<PulseState>((set) => ({
     localStorage.setItem('pulse-theme', next);
     document.documentElement.setAttribute('data-theme', next);
     return { theme: next };
+  }),
+  toggleLanguage: () => set((state) => {
+    const next = state.language === 'en' ? 'ko' : 'en';
+    localStorage.setItem('pulse-lang', next);
+    return { language: next };
   }),
 }));

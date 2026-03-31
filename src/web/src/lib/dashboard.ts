@@ -1,4 +1,4 @@
-﻿import type { PulseEvent, SessionEntry } from '../stores/pulseStore.js';
+import type { PulseEvent, SessionEntry } from '../stores/pulseStore.js';
 
 export interface ServerLog {
   ts: string;
@@ -7,14 +7,6 @@ export interface ServerLog {
   text: string;
   port?: number;
   serverReady?: boolean;
-}
-
-export interface CostSummary {
-  cost: number;
-  low: number;
-  high: number;
-  toolCalls: number;
-  toolCounts: Record<string, number>;
 }
 
 export interface AlertItem {
@@ -59,7 +51,6 @@ export interface ProjectRow {
   tools: number;
   agents: number;
   errors: number;
-  estimatedCost: number;
 }
 
 export interface ServerSummary {
@@ -136,28 +127,29 @@ export function extractCommand(toolInput?: Record<string, unknown>): string {
   return JSON.stringify(toolInput).slice(0, 120);
 }
 
-export function calculateCost(events: PulseEvent[]): CostSummary {
-  let totalInputChars = 0;
+export interface TokenSummary {
+  inputChars: number;
+  estimatedTokens: number;
+  toolCallCount: number;
+}
+
+export function buildTokenStats(events: PulseEvent[]): TokenSummary {
+  let chars = 0;
   let toolCalls = 0;
-  const toolCounts: Record<string, number> = {};
 
   for (const event of events) {
-    if (event.type !== 'tool-start') continue;
-    toolCalls += 1;
-    if (event.toolName) toolCounts[event.toolName] = (toolCounts[event.toolName] ?? 0) + 1;
-    if (event.toolInput) totalInputChars += JSON.stringify(event.toolInput).length;
+    if (event.type === 'tool-start') {
+      toolCalls++;
+      if (event.toolInput) {
+        chars += JSON.stringify(event.toolInput).length;
+      }
+    }
   }
 
-  const inputTokens = Math.round(totalInputChars / 4);
-  const outputTokens = toolCalls * 500;
-  const cost = (inputTokens / 1e6) * 3 + (outputTokens / 1e6) * 15;
-
   return {
-    cost,
-    low: cost * 0.5,
-    high: cost * 2.0,
-    toolCalls,
-    toolCounts,
+    inputChars: chars,
+    estimatedTokens: Math.round(chars / 4),
+    toolCallCount: toolCalls,
   };
 }
 
@@ -220,17 +212,6 @@ export function buildAgentSummaries(events: PulseEvent[]): AgentSummary[] {
   const agents = new Map<string, AgentSummary>();
 
   for (const event of events) {
-    if (event.agentId && !agents.has(event.agentId)) {
-      agents.set(event.agentId, {
-        agentId: event.agentId,
-        agentType: event.agentType ?? 'agent',
-        status: 'running',
-        startedAt: event.ts,
-        currentTask: event.lastAgentMessage ?? 'Awaiting task details',
-        toolCounts: {},
-      });
-    }
-
     if (event.type === 'agent-start' && event.agentId) {
       agents.set(event.agentId, {
         agentId: event.agentId,
@@ -376,18 +357,86 @@ export function buildProjectRows(sessions: SessionEntry[]): ProjectRow[] {
       tools: 0,
       agents: 0,
       errors: 0,
-      estimatedCost: 0,
     };
 
     current.sessions += 1;
     current.tools += session.toolCount;
     current.agents += session.agentCount;
     current.errors += session.errorCount;
-    current.estimatedCost += session.toolCount * 0.0075;
     projects.set(project, current);
   }
 
   return [...projects.values()].sort((left, right) => right.tools - left.tools);
+}
+
+export interface TokenUsageSummary {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  toolBreakdown: { tool: string; input: number; output: number; calls: number }[];
+}
+
+const AVG_OUTPUT_TOKENS: Record<string, number> = {
+  Read: 800,
+  Edit: 200,
+  Write: 150,
+  Bash: 600,
+  Grep: 400,
+  Glob: 200,
+  Agent: 1200,
+  Search: 500,
+};
+
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+export function buildTokenUsage(events: PulseEvent[]): TokenUsageSummary {
+  const toolMap = new Map<string, { input: number; output: number; calls: number }>();
+
+  for (const event of events) {
+    if (event.type !== 'tool-start' && event.type !== 'tool-end') continue;
+    const tool = event.toolName ?? 'Unknown';
+
+    if (!toolMap.has(tool)) {
+      toolMap.set(tool, { input: 0, output: 0, calls: 0 });
+    }
+    const entry = toolMap.get(tool)!;
+
+    if (event.type === 'tool-start') {
+      entry.calls += 1;
+      if (event.toolInput) {
+        entry.input += estimateTokens(JSON.stringify(event.toolInput));
+      }
+    }
+
+    if (event.type === 'tool-end') {
+      const resp = event.toolResponse;
+      if (resp?.stdout) {
+        entry.output += estimateTokens(resp.stdout);
+      } else if (resp?.stderr) {
+        entry.output += estimateTokens(resp.stderr);
+      } else {
+        entry.output += AVG_OUTPUT_TOKENS[tool] ?? 300;
+      }
+    }
+  }
+
+  let inputTokens = 0;
+  let outputTokens = 0;
+  const toolBreakdown: TokenUsageSummary['toolBreakdown'] = [];
+
+  for (const [tool, data] of toolMap) {
+    inputTokens += data.input;
+    outputTokens += data.output;
+    if (data.calls > 0) {
+      toolBreakdown.push({ tool, ...data });
+    }
+  }
+
+  toolBreakdown.sort((a, b) => (b.input + b.output) - (a.input + a.output));
+
+  return { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens, toolBreakdown };
 }
 
 export function buildActivityGroups(

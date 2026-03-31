@@ -5,10 +5,11 @@ import {
   pulseSessionStats,
   pulseFileHeatmap,
   pulseAgentStatus,
-  pulseCostEstimate,
+  pulseTokenUsage,
   pulseTimeline,
   pulseServerLogs,
   pulseServerErrors,
+  pulseServerHealth,
   pulseStartServer,
   pulseStopServer,
   pulseOpenDashboard,
@@ -46,10 +47,10 @@ server.tool(
 );
 
 server.tool(
-  'pulse_cost_estimate',
-  '비용 추정 (도구 호출 기반)',
+  'pulse_token_usage',
+  '세션 토큰 사용량 추정',
   { sessionId: z.string().optional().describe('세션 ID (생략 시 현재 세션)') },
-  async (params) => pulseCostEstimate(params),
+  async (params) => pulseTokenUsage(params),
 );
 
 server.tool(
@@ -79,6 +80,13 @@ server.tool(
     sessionId: z.string().optional().describe('세션 ID (생략 시 현재 세션)'),
   },
   async (params) => pulseServerErrors(params),
+);
+
+server.tool(
+  'pulse_server_health',
+  'Dev 서버 상태 종합 진단 (에러 패턴 감지, 포트 감지, 준비 상태)',
+  { sessionId: z.string().optional().describe('세션 ID (생략 시 현재 세션)') },
+  async (params) => pulseServerHealth(params),
 );
 
 server.tool(

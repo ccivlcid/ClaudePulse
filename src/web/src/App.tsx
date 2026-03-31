@@ -1,147 +1,182 @@
-﻿import { usePulseSSE, useSessions } from './hooks/usePulseData.js';
+import { useState, useEffect } from 'react';
+import { usePulseSSE, useSessions } from './hooks/usePulseData.js';
 import { useServerLogs } from './hooks/useServerLogs.js';
 import { usePulseStore } from './stores/pulseStore.js';
 import {
   buildAgentSummaries,
   buildAlertItems,
   buildFileStats,
-  calculateCost,
+  buildTokenUsage,
   formatClock,
   formatDuration,
   shortPath,
-  summarizeServer,
 } from './lib/dashboard.js';
-import ActivityStream from './components/ActivityStream.js';
-import FileHeatmap from './components/FileHeatmap.js';
-import AgentTracker from './components/AgentTracker.js';
-import CostEstimate from './components/CostEstimate.js';
-import SessionTimeline from './components/SessionTimeline.js';
-import ErrorPanel from './components/ErrorPanel.js';
-import ServerMonitor from './components/ServerMonitor.js';
-import ProjectComparison from './components/ProjectComparison.js';
+import { translations } from './lib/translations.js';
 
-function statusClass(status: 'LIVE' | 'OFFLINE' | 'WARN' | 'ERROR') {
-  if (status === 'LIVE') return 'is-success';
-  if (status === 'WARN') return 'is-warn';
-  if (status === 'ERROR') return 'is-error';
-  return 'is-neutral';
-}
+import ActivityStream from './components/ActivityStream.js';
+import TopFiles from './components/TopFiles.js';
+import AgentTracker from './components/AgentTracker.js';
+import AlertCenter from './components/AlertCenter.js';
+import ServerMonitor from './components/ServerMonitor.js';
+import TokenUsage from './components/TokenUsage.js';
+import KPIRow from './components/KPIRow.js';
 
 export default function App() {
   useSessions();
   usePulseSSE();
 
-  const { connected, activeSessionId, events, theme, toggleTheme, sessions } = usePulseStore();
+  const { connected, activeSessionId, events, toggleTheme, theme, sessions, language, toggleLanguage } = usePulseStore();
   const activeSession = sessions.find((session) => session.id === activeSessionId) ?? null;
-  const { logs } = useServerLogs(activeSessionId, 30);
+  const { logs } = useServerLogs(activeSessionId, 150);
 
-  const cost = calculateCost(events);
+  const [standaloneView, setStandaloneView] = useState<string | null>(null);
+  const t = translations[language];
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    if (view) setStandaloneView(view);
+  }, []);
+
+  const openPopout = (view: string) => {
+    const url = `${window.location.origin}${window.location.pathname}?view=${view}`;
+    window.open(url, '_blank', 'width=1400,height=850,menubar=no,status=no');
+  };
+
   const files = buildFileStats(events);
-  const agents = buildAgentSummaries(events);
   const alerts = buildAlertItems(events, logs);
-  const server = summarizeServer(logs);
+  const agents = buildAgentSummaries(events);
+  const tokenUsage = buildTokenUsage(events);
+  
   const now = Date.now();
   const startedAt = activeSession?.startedAt ?? events[0]?.ts ?? null;
   const elapsedMs = startedAt ? now - new Date(startedAt).getTime() : 0;
   const currentProject = shortPath(activeSession?.project ?? events[0]?.projectDir ?? null);
   const lastUpdated = formatClock(events.at(-1)?.ts ?? logs.at(-1)?.ts ?? null);
-  const serverStatus = server.status === 'OFFLINE' ? 'OFFLINE' : server.status;
 
-  const metrics = [
-    { label: 'Elapsed', value: startedAt ? formatDuration(elapsedMs) : '--', hint: activeSessionId ? 'Current session runtime' : 'Waiting for session' },
-    { label: 'Tool Calls', value: `${cost.toolCalls}`, hint: 'Recorded tool-start events' },
-    { label: 'Est. Cost', value: `$${cost.cost.toFixed(2)}`, hint: 'Based on tool I/O only' },
-    { label: 'Hot Files', value: `${files.filter((file) => file.total > 1).length || files.length}`, hint: files.length ? `${files.length} files touched` : 'No file activity yet' },
-    { label: 'Project', value: currentProject === 'Unknown target' ? 'No project' : currentProject, hint: activeSession ? 'Active session context' : 'No active session' },
-  ];
+  const activeAgentCount = agents.filter(a => a.status === 'running').length;
+  const toolCallCount = events.filter(e => e.type === 'tool-start').length;
+
+  if (standaloneView) {
+    const standaloneComponents: Record<string, React.ReactNode> = {
+      terminal: <ServerMonitor standalone={true} />,
+      activity: <ActivityStream />,
+      tokens: <TokenUsage />,
+      alerts: <AlertCenter alerts={alerts} />,
+      agents: <AgentTracker />,
+      files: <TopFiles files={files} />,
+    };
+    return (
+      <div className="h-screen w-screen bg-[var(--bg)] flex flex-col overflow-hidden">
+        {standaloneComponents[standaloneView] ?? <ServerMonitor standalone={true} />}
+      </div>
+    );
+  }
 
   return (
-    <div className="dashboard-shell">
-      <div className="max-w-[1680px] mx-auto px-4 py-4 lg:px-6 lg:py-5">
-        <header className="topbar mb-4 lg:mb-5">
-          <div>
-            <p className="panel-kicker">Claude Pulse</p>
-            <h1 className="text-[24px] font-semibold tracking-[-0.03em]">
-              {activeSessionId ? 'Session active' : 'No active session'}
-            </h1>
-            <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
-              {activeSessionId
-                ? `${currentProject} tracking live activity and diagnostics`
-                : 'Open the dashboard during a Claude session to see live activity and alerts.'}
-            </p>
+    <div className="cli-dashboard">
+      {/* Global Status Bar (Fixed Height) */}
+      <header className="flex-shrink-0 flex justify-between items-center bg-[var(--surface-raised)] border border-[var(--border)] px-8 py-3 rounded-t-md">
+        <div className="flex items-center gap-10">
+          <div className="flex items-center gap-4">
+            <div className={`w-3 h-3 rounded-full ${connected ? 'bg-[var(--neon-green)]' : 'bg-[var(--neon-red)]'}`}></div>
+            <span className="text-[16px] font-bold tracking-tight text-[var(--fg)] uppercase">Claude_Pulse</span>
           </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-2 lg:max-w-[55%]">
-            <span className={`status-pill ${connected ? 'is-success' : 'is-error'}`}>{connected ? 'LIVE' : 'OFFLINE'}</span>
-            <span className="status-pill is-neutral">{activeSessionId ? 'Session active' : 'No active session'}</span>
-            <span className="status-pill is-accent">{agents.filter((agent) => agent.status === 'running').length} agents</span>
-            <span className={`status-pill ${alerts.length > 0 ? 'is-error' : 'is-neutral'}`}>{alerts.length} alerts</span>
-            <span className={`status-pill ${statusClass(serverStatus)}`}>Server {serverStatus}</span>
-            <span className="status-pill is-neutral">Updated {lastUpdated}</span>
-            <button
-              onClick={toggleTheme}
-              className="icon-button"
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {theme === 'dark' ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="5" />
-                  <line x1="12" y1="1" x2="12" y2="3" />
-                  <line x1="12" y1="21" x2="12" y2="23" />
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                  <line x1="1" y1="12" x2="3" y2="12" />
-                  <line x1="21" y1="12" x2="23" y2="12" />
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </header>
-
-        <section className="metric-grid mb-4 lg:mb-5">
-          {metrics.map((metric) => (
-            <div key={metric.label} className="metric-tile">
-              <span className="metric-label">{metric.label}</span>
-              <strong className="metric-value">{metric.value}</strong>
-              <span className="metric-hint">{metric.hint}</span>
+          <div className="hidden lg:flex items-center gap-10">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-wider">{t.ENVIRONMENT}</span>
+              <span className="text-[13px] font-semibold text-[var(--fg)] mono uppercase truncate max-w-[200px]">{currentProject || t.INITIALIZING}</span>
             </div>
-          ))}
-        </section>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-wider">{t.SESSION_ID}</span>
+              <span className="text-[13px] font-medium text-[var(--text-muted)] mono">{activeSessionId?.slice(0,8).toUpperCase() || '--------'}</span>
+            </div>
+          </div>
+        </div>
 
-        <main className="grid grid-cols-12 gap-4 lg:gap-5">
-          <div className="col-span-12 xl:col-span-8">
-            <ActivityStream />
+        <div className="flex items-center gap-10">
+          <div className="flex items-center gap-10">
+            <div className="flex flex-col items-center">
+              <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-wider">{t.AGENTS}</span>
+              <span className={`text-[16px] font-bold mono ${activeAgentCount > 0 ? 'text-[var(--neon-cyan)]' : 'text-[var(--text-faint)]'}`}>
+                {activeAgentCount}
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-wider">{t.ALERTS}</span>
+              <span className={`text-[16px] font-bold mono ${alerts.length > 0 ? 'text-[var(--neon-red)]' : 'text-[var(--text-faint)]'}`}>
+                {alerts.length}
+              </span>
+            </div>
           </div>
+          <div className="h-10 w-px bg-[var(--border)] mx-4"></div>
+          <div className="flex items-center gap-10">
+            <div className="flex flex-col items-end">
+              <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-wider">{t.PROTOCOL}</span>
+              <span className={`text-[13px] font-bold ${connected ? 'text-[var(--neon-green)]' : 'text-[var(--neon-red)]'}`}>
+                {connected ? t.STABLE : t.INTERRUPTED}
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={toggleLanguage} className="cli-btn !px-4 !py-1.5">{language === 'ko' ? 'EN' : 'KO'}</button>
+              <button onClick={toggleTheme} className="cli-btn !px-4 !py-1.5">{theme.toUpperCase()}</button>
+            </div>
+          </div>
+        </div>
+      </header>
 
-          <div className="col-span-12 xl:col-span-4 flex flex-col gap-4 lg:gap-5">
-            <ErrorPanel />
-            <CostEstimate />
-          </div>
-
-          <div className="col-span-12 lg:col-span-4">
-            <SessionTimeline />
-          </div>
-          <div className="col-span-12 lg:col-span-4">
-            <FileHeatmap />
-          </div>
-          <div className="col-span-12 lg:col-span-4">
-            <AgentTracker />
-          </div>
-
-          <div className="col-span-12 lg:col-span-7">
-            <ServerMonitor />
-          </div>
-          <div className="col-span-12 lg:col-span-5">
-            <ProjectComparison />
-          </div>
-        </main>
+      {/* KPI Row (Fixed Height) */}
+      <div className="flex-shrink-0">
+        <KPIRow 
+          elapsedMs={elapsedMs} 
+          toolCalls={toolCallCount} 
+          totalTokens={tokenUsage.totalTokens} 
+          hotFiles={files.length}
+          activeAgents={activeAgentCount}
+        />
       </div>
+
+      {/* Main Workstation Layout (Fluid Content Area) */}
+      <div className="flex-1 flex gap-4 min-h-0">
+        {/* Left Column: Streams */}
+        <div className="flex-1 flex flex-col gap-4 min-w-0 min-h-0">
+          <div className="flex-[3] flex flex-col min-h-0">
+            <ActivityStream onPopout={() => openPopout('activity')} />
+          </div>
+          <div className="flex-[2] flex flex-col min-h-0">
+            <ServerMonitor onPopout={() => openPopout('terminal')} />
+          </div>
+        </div>
+
+        {/* Right Column: Analytics */}
+        <div className="w-[460px] flex-shrink-0 flex flex-col gap-4 min-h-0">
+          <div className="flex-[2] flex flex-col min-h-0">
+            <TokenUsage onPopout={() => openPopout('tokens')} />
+          </div>
+          <div className="flex-[2] flex flex-col min-h-0">
+            <AlertCenter alerts={alerts} onPopout={() => openPopout('alerts')} />
+          </div>
+          <div className="flex-[2] flex flex-col min-h-0">
+            <AgentTracker onPopout={() => openPopout('agents')} />
+          </div>
+          <div className="flex-[3] flex flex-col min-h-0">
+            <TopFiles files={files} onPopout={() => openPopout('files')} />
+          </div>
+        </div>
+      </div>
+      
+      {/* Footer (Fixed Height) */}
+      <footer className="flex-shrink-0 flex justify-between items-center bg-[var(--surface-raised)] border border-[var(--border)] px-8 py-3 rounded-b-md">
+        <div className="flex gap-12">
+          <span className="text-[11px] font-bold text-[var(--neon-green)] opacity-90 tracking-widest uppercase">{t.KERNEL_SIGNAL}: ACTIVE</span>
+          <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{t.UPTIME}: {formatDuration(elapsedMs)}</span>
+          <span className="text-[11px] font-bold text-[var(--text-faint)] uppercase tracking-widest">{t.PROTOCOL}: v1.0</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-[11px] font-medium text-[var(--text-faint)] uppercase tracking-widest">{t.LAST_PACKET}: {lastUpdated}</span>
+          <div className="cli-cursor !w-2 !h-4"></div>
+        </div>
+      </footer>
     </div>
   );
 }

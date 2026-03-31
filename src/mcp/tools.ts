@@ -4,7 +4,7 @@ import { getSessionStats, getFileHeatmap, getAgentStatus, getTimeline, readSessi
 import { getActiveSession } from '../data/index-manager.js';
 import { getServerLogPath } from '../data/writer.js';
 import { startServer, stopServer, getServerStatus } from '../server-monitor/process-manager.js';
-import { detectLevel } from '../server-monitor/error-detector.js';
+import { detectLevel, isServerReady, extractPort } from '../server-monitor/error-detector.js';
 import { startDashboard } from '../web/server.js';
 
 type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
@@ -76,39 +76,6 @@ export function pulseAgentStatus(params: { sessionId?: string }): ToolResult {
   const done = agents.filter(a => a.status === 'done').length;
 
   return text(`── Agent Tracker ──\n${lines.join('\n')}\n\n활성: ${running} | 완료: ${done}`);
-}
-
-export function pulseCostEstimate(params: { sessionId?: string }): ToolResult {
-  const sid = resolveSessionId(params.sessionId);
-  if (!sid) return error('활성 세션이 없습니다.');
-
-  const events = readSessionEvents(sid);
-  let totalInputChars = 0;
-  let toolCalls = 0;
-
-  for (const event of events) {
-    if (event.type === 'tool-start') {
-      toolCalls++;
-      if (event.toolInput) {
-        totalInputChars += JSON.stringify(event.toolInput).length;
-      }
-    }
-  }
-
-  const estimatedInputTokens = Math.round(totalInputChars / 4);
-  const estimatedOutputTokens = toolCalls * 500;
-  const sonnetInputCost = (estimatedInputTokens / 1_000_000) * 3;
-  const sonnetOutputCost = (estimatedOutputTokens / 1_000_000) * 15;
-  const estimated = sonnetInputCost + sonnetOutputCost;
-  const low = estimated * 0.5;
-  const high = estimated * 2.0;
-
-  return text(`── Cost Estimate ──
-추정 비용: ~$${estimated.toFixed(2)} (도구 호출 기반, 실제와 다를 수 있음)
-예상 범위: $${low.toFixed(2)} ~ $${high.toFixed(2)}
-도구 호출: ${toolCalls}회
-
-⚠️ Hook에서는 시스템 프롬프트/대화 히스토리 토큰을 볼 수 없어 실제의 30~60% 수준만 추정 가능합니다.`);
 }
 
 export function pulseTimeline(params: { sessionId?: string }): ToolResult {
@@ -183,6 +150,73 @@ export function pulseServerErrors(params: { since?: string; sessionId?: string }
   return text(`── Server Errors (${errors.length}건) ──\n${lines.join('\n')}`);
 }
 
+export function pulseServerHealth(params: { sessionId?: string }): ToolResult {
+  const sid = resolveSessionId(params.sessionId);
+  if (!sid) return error('활성 세션이 없습니다.');
+
+  const managed = getServerStatus();
+  const logs = readServerLogs(sid);
+
+  // Process status
+  const processStatus = managed
+    ? `PID: ${managed.process.pid} | Command: ${managed.command} | Ready: ${managed.ready ? 'YES' : 'NO'}`
+    : 'NOT RUNNING';
+
+  // Port detection
+  const detectedPort = managed?.port
+    ?? logs.reduceRight<number | null>((found, l) => found ?? extractPort(l.text), null);
+
+  // Analyze recent logs with error-detector
+  const recent = logs.slice(-100);
+  let errorCount = 0;
+  let warnCount = 0;
+  let infoCount = 0;
+  const recentErrors: string[] = [];
+
+  for (const log of recent) {
+    const level = detectLevel(log.text);
+    if (level === 'error') {
+      errorCount++;
+      if (recentErrors.length < 5) {
+        const time = new Date(log.ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        recentErrors.push(`  ${time}  ${log.text}`);
+      }
+    } else if (level === 'warn') {
+      warnCount++;
+    } else {
+      infoCount++;
+    }
+  }
+
+  // Server ready detection from recent logs
+  const readySignal = [...recent].reverse().find(l => isServerReady(l.text));
+
+  // Health grade
+  const grade = !managed ? 'OFFLINE'
+    : errorCount > 5 ? 'CRITICAL'
+    : errorCount > 0 ? 'DEGRADED'
+    : warnCount > 3 ? 'WARNING'
+    : 'HEALTHY';
+
+  const lines = [
+    `── Server Health Diagnostics ──────`,
+    `Status: ${grade}`,
+    `Process: ${processStatus}`,
+    `Port: ${detectedPort ?? 'unknown'}`,
+    `Ready Signal: ${readySignal ? 'detected' : 'none'}`,
+    ``,
+    `Log Analysis (last ${recent.length} lines):`,
+    `  Errors: ${errorCount} | Warnings: ${warnCount} | Info: ${infoCount}`,
+  ];
+
+  if (recentErrors.length > 0) {
+    lines.push('', 'Recent Errors:', ...recentErrors);
+  }
+
+  lines.push('──────────────────────────────────');
+  return text(lines.join('\n'));
+}
+
 export function pulseStartServer(params: { command: string; port?: number }): ToolResult {
   const sid = resolveSessionId();
   if (!sid) return error('활성 세션이 없습니다.');
@@ -194,6 +228,65 @@ export function pulseStartServer(params: { command: string; port?: number }): To
 export function pulseStopServer(): ToolResult {
   const result = stopServer();
   return text(result.message);
+}
+
+const AVG_OUTPUT_TOKENS: Record<string, number> = {
+  Read: 800, Edit: 200, Write: 150, Bash: 600, Grep: 400, Glob: 200, Agent: 1200, Search: 500,
+};
+
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+export function pulseTokenUsage(params: { sessionId?: string }): ToolResult {
+  const sid = resolveSessionId(params.sessionId);
+  if (!sid) return error('활성 세션이 없습니다.');
+
+  const events = readSessionEvents(sid);
+  const toolMap = new Map<string, { input: number; output: number; calls: number }>();
+
+  for (const event of events) {
+    if (event.type !== 'tool-start' && event.type !== 'tool-end') continue;
+    const tool = event.toolName ?? 'Unknown';
+
+    if (!toolMap.has(tool)) toolMap.set(tool, { input: 0, output: 0, calls: 0 });
+    const entry = toolMap.get(tool)!;
+
+    if (event.type === 'tool-start') {
+      entry.calls += 1;
+      if (event.toolInput) entry.input += estimateTokens(JSON.stringify(event.toolInput));
+    }
+
+    if (event.type === 'tool-end') {
+      const resp = event.toolResponse;
+      if (resp?.stdout) entry.output += estimateTokens(resp.stdout);
+      else if (resp?.stderr) entry.output += estimateTokens(resp.stderr);
+      else entry.output += AVG_OUTPUT_TOKENS[tool] ?? 300;
+    }
+  }
+
+  let totalInput = 0;
+  let totalOutput = 0;
+  const lines: string[] = [];
+
+  for (const [tool, data] of [...toolMap.entries()].sort((a, b) => (b[1].input + b[1].output) - (a[1].input + a[1].output))) {
+    totalInput += data.input;
+    totalOutput += data.output;
+    const total = data.input + data.output;
+    lines.push(`  ${tool}: ${total.toLocaleString()} tkn (in:${data.input.toLocaleString()} out:${data.output.toLocaleString()}) x${data.calls}`);
+  }
+
+  const totalTokens = totalInput + totalOutput;
+
+  return text(`── Token Usage (추정) ─────────────
+Input: ${totalInput.toLocaleString()} tokens
+Output: ${totalOutput.toLocaleString()} tokens
+Total: ${totalTokens.toLocaleString()} tokens
+
+${lines.length > 0 ? lines.join('\n') : '  (도구 사용 없음)'}
+
+※ 추정치: tool_input 길이 기반 (~4 chars/token)
+───────────────────────────────────`);
 }
 
 let dashboardRunning = false;

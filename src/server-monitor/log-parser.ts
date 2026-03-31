@@ -15,7 +15,8 @@ export function parseLogLine(text: string, source: 'stdout' | 'stderr'): ServerL
     return { ts: new Date().toISOString(), level: 'info', source, text: '' };
   }
 
-  const level: LogLevel = source === 'stderr' ? 'error' : detectLevel(trimmed);
+  const detected = detectLevel(trimmed);
+  const level: LogLevel = detected !== 'info' ? detected : (source === 'stderr' ? 'warn' : 'info');
   const entry: ServerLogEntry = {
     ts: new Date().toISOString(),
     level,

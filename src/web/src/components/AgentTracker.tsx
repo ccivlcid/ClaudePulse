@@ -1,62 +1,63 @@
-﻿import { buildAgentSummaries, formatDuration } from '../lib/dashboard.js';
+import { buildAgentSummaries, formatDuration } from '../lib/dashboard.js';
 import { usePulseStore } from '../stores/pulseStore.js';
+import { translations } from '../lib/translations.js';
 
-export default function AgentTracker() {
+interface AgentTrackerProps {
+  onPopout?: () => void;
+}
+
+export default function AgentTracker({ onPopout }: AgentTrackerProps) {
   const events = usePulseStore((state) => state.events);
+  const language = usePulseStore((state) => state.language);
+  const t = translations[language];
   const agents = buildAgentSummaries(events);
-  const running = agents.filter((agent) => agent.status === 'running').length;
+  const running = agents.filter(a => a.status === 'running').length;
 
   return (
-    <div className="card h-[420px] flex flex-col">
-      <div className="flex items-start justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--border)' }}>
-        <div>
-          <p className="panel-kicker">Subagent Watch</p>
-          <h2 className="panel-title">Agent Tracker</h2>
-          <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
-            Running agents, latest task context, and captured tool activity.
-          </p>
-        </div>
-        <div className="text-right">
-          <div className="metric-value text-[26px]">{running}</div>
-          <div className="panel-meta">running now</div>
+    <div className="cli-pane">
+      <div className="cli-pane-header">
+        <span className="cli-pane-title">{t.AGENT_TRACKER}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[var(--neon-cyan)] text-[12px] font-bold uppercase tracking-wider">{running} {t.ACTIVE}</span>
+          {onPopout && <button onClick={onPopout} className="cli-btn !px-3 !py-1" title="Popout"><span className="text-[14px] font-bold">↗</span></button>}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pt-4 space-y-3 pr-1">
+      <div className="cli-pane-content font-mono bg-[var(--bg)] p-8">
         {agents.length === 0 ? (
-          <div className="empty-state h-full">
-            <h3>No active agents</h3>
-            <p>Subagent activity will appear here.</p>
+          <div className="h-full flex items-center justify-center opacity-40">
+            <span className="text-[14px] font-bold text-[var(--text-faint)] uppercase tracking-[0.2em]">{t.IDLE_NODES}</span>
           </div>
         ) : (
-          agents.map((agent) => {
-            const elapsedMs = (agent.endedAt ? new Date(agent.endedAt).getTime() : Date.now()) - new Date(agent.startedAt).getTime();
-            const summary = ['Read', 'Edit', 'Bash']
-              .map((key) => `${key[0]} ${agent.toolCounts[key] ?? 0}`)
-              .join(' / ');
-
-            return (
-              <article key={agent.agentId} className="stat-row">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`status-pill ${agent.status === 'running' ? 'is-success' : 'is-neutral'}`}>
-                        {agent.status === 'running' ? 'RUNNING' : 'DONE'}
-                      </span>
-                      <h3 className="text-[13px] font-medium">{agent.agentType}</h3>
-                    </div>
-                    <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                      {agent.currentTask}
-                    </p>
+          <div className="space-y-8">
+            {agents.map((agent) => (
+              <div key={agent.agentId} className="relative pl-5 border-l-2 border-[var(--border-strong)] py-1">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[var(--fg-bright)] font-bold text-[14px] uppercase tracking-wider">{agent.agentType}</span>
+                    <div className={`w-2 h-2 rounded-full ${agent.status === 'running' ? 'bg-[var(--neon-green)] shadow-[0_0_8px_var(--neon-green)]' : 'bg-[var(--text-faint)]'}`}></div>
                   </div>
-                  <span className="panel-meta shrink-0">{formatDuration(elapsedMs)}</span>
+                  {agent.status === 'running' && (
+                    <span className="text-[var(--neon-amber)] text-[11px] font-bold uppercase mono bg-[var(--neon-amber)]/10 px-2 py-0.5 rounded-sm">
+                      {t.RUN_TIME}: {formatDuration(Date.now() - new Date(agent.startedAt).getTime())}
+                    </span>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                  <span className="split-chip">{summary}</span>
+                
+                <div className="text-[var(--fg)] text-[12px] font-medium truncate mb-4 italic bg-[var(--surface)] px-3 py-2 rounded-md border border-[var(--border)]">
+                  {agent.currentTask}
                 </div>
-              </article>
-            );
-          })
+                
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(agent.toolCounts).map(([tool, count]) => (
+                    <span key={tool} className="text-[10px] font-bold text-[var(--text-muted)] border border-[var(--border)] px-2 py-1 mono bg-[var(--surface-raised)] rounded-sm">
+                      <span className="text-[var(--neon-cyan)]">{tool.toUpperCase().charAt(0)}</span>_{count}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

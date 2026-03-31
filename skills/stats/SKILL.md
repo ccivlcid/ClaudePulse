@@ -10,5 +10,5 @@ description: Show current session statistics from Claude Pulse
 
 <Instructions>
 1. Call `pulse_session_stats` MCP tool to get current session statistics
-2. Display tool call counts, agent activity, error count, elapsed time, and estimated cost range
+2. Display tool call counts, agent activity, error count, and elapsed time
 </Instructions>

@@ -4,6 +4,7 @@ import { serve } from '@hono/node-server';
 import { streamSSE } from 'hono/streaming';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getSessions, getActiveSession } from '../data/index-manager.js';
 import { readSessionEvents, getSessionStats, getFileHeatmap, getAgentStatus, getTimeline } from '../data/reader.js';
 import { getSessionFilePath, getServerLogPath, getPulseDir } from '../data/writer.js';
@@ -94,7 +95,7 @@ app.get('/api/sse', (c) => {
     // Watch for new events
     let watching = true;
 
-    const checkNewEvents = () => {
+    const checkNewEvents = async () => {
       if (!watching) return;
       try {
         const stat = fs.statSync(filePath);
@@ -110,7 +111,7 @@ app.get('/api/sse', (c) => {
             if (!line) continue;
             try {
               const event = JSON.parse(line);
-              stream.writeSSE({ event: 'pulse-event', data: JSON.stringify(event) });
+              await stream.writeSSE({ event: 'pulse-event', data: JSON.stringify(event) });
             } catch { /* skip bad line */ }
           }
         }
@@ -125,9 +126,9 @@ app.get('/api/sse', (c) => {
     }
 
     // Heartbeat + fallback polling
-    const interval = setInterval(() => {
-      checkNewEvents();
-      stream.writeSSE({ event: 'heartbeat', data: '' });
+    const interval = setInterval(async () => {
+      await checkNewEvents();
+      await stream.writeSSE({ event: 'heartbeat', data: '' });
     }, 3000);
 
     stream.onAbort(() => {
@@ -147,7 +148,7 @@ app.get('/api/sse', (c) => {
 
 app.get('*', (c) => {
   // When compiled, server.js is in dist/web/ alongside index.html and assets/
-  const webDir = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Z]:)/, '$1');
+  const webDir = path.dirname(fileURLToPath(import.meta.url));
   const reqPath = c.req.path === '/' ? '/index.html' : c.req.path;
   const filePath = path.join(webDir, reqPath);
 

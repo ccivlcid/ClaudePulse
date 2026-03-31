@@ -36,7 +36,11 @@ export function usePulseSSE() {
     });
 
     es.onopen = () => setConnected(true);
-    es.onerror = () => setConnected(false);
+    es.onerror = () => {
+      if (es.readyState === EventSource.CLOSED) {
+        setConnected(false);
+      }
+    };
 
     // If no heartbeat within 5s, flush initial batch
     const timeout = setTimeout(() => {
