@@ -21,3 +21,10 @@ coverage/
 
 # Vite
 src/web/.vite/
+
+# Claude Code local settings (contains user-specific paths and permissions)
+.claude/settings.json
+.claude/settings.local.json
+
+# Internal design docs
+CLAUDE-PULSE-PRD.md
