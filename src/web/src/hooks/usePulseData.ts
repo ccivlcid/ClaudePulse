@@ -93,12 +93,18 @@ export function useSessions() {
     // Set active session only on first load
     if (!initializedRef.current) {
       initializedRef.current = true;
-      fetch(`${API_BASE}/api/sessions/active${projectParam}`)
-        .then(r => r.json())
-        .then(active => {
-          if (active?.id) setActiveSessionId(active.id);
-        })
-        .catch(() => {});
+      // URL sessionId param takes priority (used by popout windows)
+      const urlSessionId = new URLSearchParams(window.location.search).get('sessionId');
+      if (urlSessionId) {
+        setActiveSessionId(urlSessionId);
+      } else {
+        fetch(`${API_BASE}/api/sessions/active${projectParam}`)
+          .then(r => r.json())
+          .then(active => {
+            if (active?.id) setActiveSessionId(active.id);
+          })
+          .catch(() => {});
+      }
     }
 
     fetchSessions();

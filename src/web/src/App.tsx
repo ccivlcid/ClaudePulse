@@ -42,7 +42,9 @@ export default function App() {
   const { setActiveSessionId: switchSession } = usePulseStore();
 
   const openPopout = (view: string) => {
-    const url = `${window.location.origin}${window.location.pathname}?view=${view}`;
+    const params = new URLSearchParams({ view });
+    if (activeSessionId) params.set('sessionId', activeSessionId);
+    const url = `${window.location.origin}${window.location.pathname}?${params}`;
     window.open(url, '_blank', 'width=1400,height=850,menubar=no,status=no');
   };
 

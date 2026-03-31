@@ -9,7 +9,7 @@
     {
       "name": "claude-pulse",
       "description": "Real-time activity dashboard for Claude Code. Tracks tool usage, agent activity, dev server logs, and cost estimates with a web-based visualization UI.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "source": "./",
       "category": "productivity",
       "tags": [
@@ -21,5 +21,5 @@
       ]
     }
   ],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
